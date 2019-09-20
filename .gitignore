@@ -3,3 +3,6 @@
 */cmake_install.cmake
 */CMakeCashe.txt
 Lab1/Makefile
+*.swp
+*.swo
+*.vim
