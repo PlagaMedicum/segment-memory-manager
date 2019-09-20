@@ -1,4 +1,4 @@
-typedef char** SEGMENT;
+#include "storage.h"
 
 struct segment_table
 {
@@ -12,4 +12,5 @@ struct segment_link
 	int d; // Adress shift.
 	int s; // Segment index.
 };
+
 

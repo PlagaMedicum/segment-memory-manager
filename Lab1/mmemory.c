@@ -1,3 +1,5 @@
+#include "mmemory.h"
+
 int _malloc (VA* ptr, size_t szBlock)
 {
 
@@ -18,8 +20,8 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
 
 }
 
-int _init (int n, int szPage)
+int s_init (int n, int szPage)
 {
-
+	puts("SAS!");
 }
 

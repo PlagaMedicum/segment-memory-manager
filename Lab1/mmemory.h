@@ -1,15 +1,9 @@
-/************************************************************************
-		Лабораторная работа №1
-
-	Описание интерфейсных функций модели менеджера памяти
-
- ************************************************************************/
-
-
+#include <stddef.h>
+#include <stdio.h>
 
 typedef char* VA;				// Тип описывающий адрес блока 
 
-
+#define _init s_init
 
 /**
  	@func	_malloc	
@@ -26,8 +20,6 @@ typedef char* VA;				// Тип описывающий адрес блока
  **/
 int _malloc (VA* ptr, size_t szBlock);
 
-
-
 /**
  	@func	_free
  	@brief	Удаление блока памяти
@@ -40,8 +32,6 @@ int _malloc (VA* ptr, size_t szBlock);
 	@retval	1	неизвестная ошибка
  **/
 int _free (VA ptr);
-
-
 
 /**
  	@func	_read
@@ -59,8 +49,6 @@ int _free (VA ptr);
  **/
 int _read (VA ptr, void* pBuffer, size_t szBuffer);
 
-
-
 /**
  	@func	_write
  	@brief	Запись информации в блок памяти
@@ -77,8 +65,6 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer);
  **/
 int _write (VA ptr, void* pBuffer, size_t szBuffer);
 
-
-
 /**
  	@func	_init
  	@brief	Инициализация модели менеджера памяти
@@ -93,4 +79,4 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer);
 	@retval	-1	неверные параметры
 	@retval	1	неизвестная ошибка
  **/
-int _init (int n, int szPage);
+int s_init (int n, int szPage);
