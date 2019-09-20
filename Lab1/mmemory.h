@@ -1,7 +1,12 @@
-#include <stddef.h>
-#include <stdio.h>
+#ifndef STORAGE_H
+#define STORAGE_H
 
-typedef char* VA;				// Тип описывающий адрес блока 
+#include <stddef.h>
+
+typedef char* VA;	// Тип описывающий адрес блока 
+typedef VA* SEGMENT;
+typedef struct segment_table SEGMENT_TABLE;
+typedef struct segment_link SEGMENT_LINK;
 
 #define _init s_init
 
@@ -9,7 +14,7 @@ typedef char* VA;				// Тип описывающий адрес блока
  	@func	_malloc	
  	@brief	Выделяет блок памяти определенного размера
 	
-	@param	[out] ptr		адресс блока
+	@param	[out] ptr	адресс блока
 	@param	[in]  szBlock	размер блока
 	
 	@return	код ошибки
@@ -24,7 +29,7 @@ int _malloc (VA* ptr, size_t szBlock);
  	@func	_free
  	@brief	Удаление блока памяти
 	
-	@param	[in] ptr		адресс блока
+	@param	[in] ptr	адресс блока
 	
 	@return	код ошибки
 	@retval	0	успешное выполнение
@@ -37,7 +42,7 @@ int _free (VA ptr);
  	@func	_read
  	@brief	Чтение информации из блока памяти
 	
-	@param	[in] ptr		адресс блока
+	@param	[in] ptr	адресс блока
 	@param	[in] pBuffer	адресс буфера куда копируется инфомация
 	@param	[in] szBuffer	размер буфера
 	
@@ -53,7 +58,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer);
  	@func	_write
  	@brief	Запись информации в блок памяти
 	
-	@param	[in] ptr		адресс блока
+	@param	[in] ptr	адресс блока
 	@param	[in] pBuffer	адресс буфера куда копируется инфомация
 	@param	[in] szBuffer	размер буфера
 	
@@ -79,4 +84,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer);
 	@retval	-1	неверные параметры
 	@retval	1	неизвестная ошибка
  **/
-int s_init (int n, int szPage);
+int s_init (int n, int sz);
+
+#endif
+
