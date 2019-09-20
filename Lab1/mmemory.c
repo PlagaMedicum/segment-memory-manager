@@ -1,4 +1,5 @@
 #include "mmemory.h"
+#include <stdbool.h>
 
 struct segment_table
 {
@@ -23,11 +24,13 @@ int _malloc (VA* ptr, size_t szBlock)
 	{
 		return -1;
 	}
+
+    return 0;
 }
 
 int _free (VA ptr)
 {
-
+    return 0;
 }
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
@@ -36,6 +39,8 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 	{
 		return -1;
 	}
+
+    return 0;
 }
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
@@ -44,6 +49,8 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
 	{
 		return -1;
 	}
+
+    return 0;
 }
 
 int s_init (int n, int sz)
@@ -53,10 +60,10 @@ int s_init (int n, int sz)
 		return -1;
 	}
 
-	s_table->beginning = (VA*)malloc(n * sz * sizeof(VA));
-	s_table->length = n;
+	s_table.beginning = (SEGMENT)malloc(n * sz * sizeof(VA));
+	s_table.length = n;
 
-	s_table->is_present = 1;
+	s_table.is_present = 1;
 	return 0;
 }
 
