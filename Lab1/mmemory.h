@@ -4,17 +4,14 @@
 #include <stddef.h>
 
 typedef char* VA;	// Тип описывающий адрес блока 
-typedef VA* SEGMENT;
-typedef struct segment_table SEGMENT_TABLE;
-typedef struct segment_link SEGMENT_LINK;
 
-#define _init s_init
+#define _init(x) s_init(x)
 
 /**
  	@func	_malloc	
  	@brief	Выделяет блок памяти определенного размера
 	
-	@param	[out] ptr	адресс блока
+	@param	[out] ptr	    адресс блока
 	@param	[in]  szBlock	размер блока
 	
 	@return	код ошибки
@@ -23,7 +20,7 @@ typedef struct segment_link SEGMENT_LINK;
 	@retval	-2	нехватка памяти
 	@retval	1	неизвестная ошибка
  **/
-int _malloc (VA* ptr, size_t szBlock);
+int _malloc (VA ptr, size_t szBlock);   // changed VA* ptr -> VA ptr here
 
 /**
  	@func	_free
@@ -42,7 +39,7 @@ int _free (VA ptr);
  	@func	_read
  	@brief	Чтение информации из блока памяти
 	
-	@param	[in] ptr	адресс блока
+	@param	[in] ptr	    адресс блока
 	@param	[in] pBuffer	адресс буфера куда копируется инфомация
 	@param	[in] szBuffer	размер буфера
 	
@@ -58,7 +55,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer);
  	@func	_write
  	@brief	Запись информации в блок памяти
 	
-	@param	[in] ptr	адресс блока
+	@param	[in] ptr	    адресс блока
 	@param	[in] pBuffer	адресс буфера куда копируется инфомация
 	@param	[in] szBuffer	размер буфера
 	
