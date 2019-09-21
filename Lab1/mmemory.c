@@ -2,41 +2,66 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-// S_TABLE is a stack that represents segments table
+// free_spaceof gets amount of free space in the memory.
+#define free_spaceof(x) (x.s - (x.te->va + x.te->l) * sizeof(VA))
+
+// eo_alloc gets VA of last allocated block of the segment x.
+#define eo_alloc(x) (x->va + x->l)
+
+// ST is a stack that represents segments table.
 typedef struct
 {
-	size_t va;              // Segment VA.
-	struct S_TABLE* p;      // Physical address of prev segment's VA.
-	// bool is_p;              // Checks if segment is present in memory.
-} S_TABLE;
+	size_t va;              // Segment VA. 
+                            // TODO: Maybe need to change size_t -> VA.
+    size_t l;               // Length of the segment.
+	struct ST* p;           // Physical address of prev segment's VA.
+} ST;
 
 // MEMORY represents virtual memory
 typedef struct 
 {
 	VA b;		    // Points to the first block of memory.
-	size_t s;	    // Number of bytes in memory.
-    S_TABLE* te;    // Points to the ending of segments table stack.
+	size_t s;	    // Number of blocks in memory.
+    ST* te;         // Points to the ending of segments table stack.
 } MEMORY;
 
-MEMORY vmem;         // Virtual memory instance.
+MEMORY vmem;    // Virtual memory instance.
 
-// get_free returns amount of free space in the memory.
-size_t get_free ()
+// find_swb returns physical adress of record in segment
+// table with the segment containing block of ptr.
+ST* find_swb (VA ptr)
 {
-    return vmem.s - vmem.te->va * sizeof(VA);
+    if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
+    {
+        return NULL;
+    }
+
+    ST* segm = vmem.te;
+    while (segm->p != NULL)
+    {
+        if (ptr > segm->va)
+        {
+            return segm;
+        }
+
+        segm = segm->p;
+    }
+
+    return NULL;
 }
 
 int _malloc (VA* ptr, size_t szBlock)
 {
-	if (szBlock > get_free())
+	if (szBlock > free_spaceof(vmem))
 	{
-		return -1;
+		return -2;
 	}
 
-    S_TABLE* tmp_t = vmem.te;
-    vmem.te = malloc(sizeof(S_TABLE));
-    vmem.te->va = tmp_t->va + szBlock;
-    vmem.te->p = tmp_t;
+    ST* segm = vmem.te;
+    vmem.te = malloc(sizeof(ST));
+    vmem.te->va = segm->va + segm->l;
+    vmem.te->l = szBlock;
+    vmem.te->p = segm;
 
     ptr = malloc(szBlock * sizeof(VA));
 
@@ -45,7 +70,7 @@ int _malloc (VA* ptr, size_t szBlock)
 
 int _free (VA ptr)
 {
-    if ((1))    // TODO
+    if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
     {
         return -1;
     }
@@ -55,20 +80,34 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((1))    // TODO
+	if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
 	{
 		return -1;
 	}
+    
+    ST* segm = find_swb(ptr);
+
+    if ((segm == NULL) || (szBuffer > segm->l))
+    {
+        return -2;
+    }
 
     return 0;
 }
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((1))    // TODO
-	{
+	if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
+    {
 		return -1;
 	}
+
+    ST* segm = find_swb(ptr);
+
+    if ((segm == NULL) || (szBuffer > segm->l))
+    {
+        return -2;
+    }
 
     return 0;
 }
@@ -80,12 +119,8 @@ int s_init (int n, int szPage)
 		return -1;
 	}
 
-	vmem.b = malloc(n * szPage * sizeof(VA));
+	vmem.b = malloc(n * szPage * sizeof(VA*));
     vmem.s = n * szPage;
-
-    S_TABLE s_table;
-    s_table.va = 0;
-    vmem.tb = &s_table;
 
 	return 0;
 }
