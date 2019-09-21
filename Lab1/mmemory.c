@@ -7,7 +7,7 @@ typedef struct
 {
 	size_t va;              // Segment VA.
 	struct S_TABLE* p;      // Physical address of prev segment's VA.
-	bool is_p;              // Checks if segment is present in memory.
+	// bool is_p;              // Checks if segment is present in memory.
 } S_TABLE;
 
 // MEMORY represents virtual memory
@@ -33,6 +33,11 @@ int _malloc (VA* ptr, size_t szBlock)
 		return -1;
 	}
 
+    S_TABLE* tmp_t = vmem.te;
+    vmem.te = malloc(sizeof(S_TABLE));
+    vmem.te->va = tmp_t->va + szBlock;
+    vmem.te->p = tmp_t;
+
     ptr = malloc(szBlock * sizeof(VA));
 
     return 0;
@@ -40,7 +45,7 @@ int _malloc (VA* ptr, size_t szBlock)
 
 int _free (VA ptr)
 {
-    if ((1))
+    if ((1))    // TODO
     {
         return -1;
     }
