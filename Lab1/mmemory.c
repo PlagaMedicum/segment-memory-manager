@@ -2,11 +2,14 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-// free_spaceof gets amount of free space in the memory.
+// free_spaceof gets amount of free space in the memory x.
 #define free_spaceof(x) (x.s - (x.te->va + x.te->l) * sizeof(VA))
 
 // eo_alloc gets VA of last allocated block of the segment x.
 #define eo_alloc(x) (x->va + x->l)
+
+// segment_pa gets physical address of the segment x in vmem.
+#define segment_pa(x) (vmem.b + x->va * sizeof(VA))
 
 // ST is a stack that represents segments table.
 typedef struct
@@ -31,7 +34,7 @@ MEMORY vmem;    // Virtual memory instance.
 // table with the segment containing block of ptr.
 ST* find_swb (VA ptr)
 {
-    if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
+    if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
     {
         return NULL;
     }
@@ -39,12 +42,12 @@ ST* find_swb (VA ptr)
     ST* segm = vmem.te;
     while (segm->p != NULL)
     {
-        if (ptr > segm->va)
+        if (ptr > segm->va) // TODO
         {
             return segm;
         }
 
-        segm = segm->p;
+        segm = segm->p; // TODO
     }
 
     return NULL;
@@ -63,16 +66,22 @@ int _malloc (VA* ptr, size_t szBlock)
     vmem.te->l = szBlock;
     vmem.te->p = segm;
 
-    ptr = malloc(szBlock * sizeof(VA));
+    *ptr = malloc(szBlock * sizeof(VA));
 
     return 0;
 }
 
 int _free (VA ptr)
 {
-    if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
+    if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
     {
         return -1;
+    }
+
+    ST* segm = find_swb(ptr);
+    if (segm == NULL)
+    {
+        return 1;
     }
 
     return 0;
@@ -80,16 +89,24 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
+	if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
 	{
 		return -1;
 	}
     
     ST* segm = find_swb(ptr);
-
-    if ((segm == NULL) || (szBuffer > segm->l))
+    if (szBuffer > segm->l)
     {
         return -2;
+    }
+    if (segm == NULL)
+    {
+        return 1;
+    }
+
+    for (int i = 0; i < szBuffer; i++)
+    {
+        *(pBuffer + i) = *(segment_pa(segm) + i);   // TODO
     }
 
     return 0;
@@ -97,16 +114,24 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > eo_alloc(vmem.te)))
+	if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
     {
 		return -1;
 	}
 
     ST* segm = find_swb(ptr);
-
-    if ((segm == NULL) || (szBuffer > segm->l))
+    if (szBuffer > segm->l)
     {
         return -2;
+    }
+    if (segm == NULL)
+    {
+        return 1;
+    }
+
+    for (int i = 0; i < szBuffer; i++)
+    {
+        *(segment_pa(segm) + i) = *(pBuffer + i);   // TODO
     }
 
     return 0;
