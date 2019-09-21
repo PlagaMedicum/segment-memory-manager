@@ -5,7 +5,7 @@
 
 typedef char* VA;	// Тип описывающий адрес блока 
 
-#define _init(x) s_init(x)
+#define _init(x, y) s_init(x, y)
 
 /**
  	@func	_malloc	
@@ -20,7 +20,7 @@ typedef char* VA;	// Тип описывающий адрес блока
 	@retval	-2	нехватка памяти
 	@retval	1	неизвестная ошибка
  **/
-int _malloc (VA ptr, size_t szBlock);   // changed VA* ptr -> VA ptr here
+int _malloc (VA* ptr, size_t szBlock);
 
 /**
  	@func	_free
@@ -81,7 +81,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer);
 	@retval	-1	неверные параметры
 	@retval	1	неизвестная ошибка
  **/
-int s_init (int n, int sz);
+int s_init (int n, int szPage);
 
 #endif
 

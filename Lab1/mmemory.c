@@ -2,43 +2,45 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-typedef VA* SEGMENT;
-
-typedef struct 
-{
-	bool is_present;	// Checks if segment is present in memory
-	VA beginning;		// points to beginning of segment
-	size_t length;		// Number of elements in table
-} segment_table;
-
+// S_TABLE is a stack that represents segments table
 typedef struct
 {
-	int d; // Address shift.
-	int s; // Segment index.
-} segment_link;
+	size_t va;              // Segment VA.
+	struct S_TABLE* p;      // Physical address of prev segment's VA.
+	bool is_p;              // Checks if segment is present in memory.
+} S_TABLE;
 
-segment_table s_table;  // Segment table instance
-
-// get_ending returns address of last element
-// in last segment of s_table instance.
-VA get_ending ()
+// MEMORY represents virtual memory
+typedef struct 
 {
-    return s_table.beginning + s_table.length * sizeof(VA);
+	VA b;		    // Points to the first block of memory.
+	size_t s;	    // Number of bytes in memory.
+    S_TABLE* te;    // Points to the ending of segments table stack.
+} MEMORY;
+
+MEMORY vmem;         // Virtual memory instance.
+
+// get_free returns amount of free space in the memory.
+size_t get_free ()
+{
+    return vmem.s - vmem.te->va * sizeof(VA);
 }
 
-int _malloc (VA ptr, size_t szBlock)
+int _malloc (VA* ptr, size_t szBlock)
 {
-	if ((s_table.beginning > ptr) && (ptr > get_ending()) && (szBlock < 1))  // TODO
+	if (szBlock > get_free())
 	{
 		return -1;
 	}
+
+    ptr = malloc(szBlock * sizeof(VA));
 
     return 0;
 }
 
 int _free (VA ptr)
 {
-    if ((s_table.beginning > ptr) && (ptr > get_ending()))
+    if ((1))
     {
         return -1;
     }
@@ -48,7 +50,7 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((s_table.beginning > ptr) && (ptr > get_ending()) && (szBuffer < 1)) // TODO
+	if ((1))    // TODO
 	{
 		return -1;
 	}
@@ -58,7 +60,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((s_table.beginning > ptr) && (ptr > get_ending()) && (szBuffer < 1)) // TODO
+	if ((1))    // TODO
 	{
 		return -1;
 	}
@@ -66,17 +68,20 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
     return 0;
 }
 
-int s_init (int n, int sz)
+int s_init (int n, int szPage)
 {
-	if ((n < 1) || (sz < 1))
+	if ((n < 1) || (szPage < 1))
 	{
 		return -1;
 	}
 
-	s_table.beginning = malloc(n * sz * sizeof(VA));
-	s_table.length = n;
+	vmem.b = malloc(n * szPage * sizeof(VA));
+    vmem.s = n * szPage;
 
-	s_table.is_present = 1;
+    S_TABLE s_table;
+    s_table.va = 0;
+    vmem.tb = &s_table;
+
 	return 0;
 }
 
