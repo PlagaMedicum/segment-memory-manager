@@ -1,8 +1,8 @@
-*/bin
-*/CMakeFiles
-*/cmake_install.cmake
-*/CMakeCashe.txt
-Lab1/Makefile
+bin
+CMakeFiles
+cmake_install.cmake
+CMakeCache.txt
+Makefile
 *.swp
 *.swo
 *.vim
