@@ -1,6 +1,6 @@
 #include "mmemory.h"
 #include <stdbool.h>
-#include <stdlib.h>
+#include <unistd.h>
 
 // free_spaceof gets amount of free space in the memory x.
 #define free_spaceof(x) (x.s - (x.te->va + x.te->l) * sizeof(VA))
@@ -30,11 +30,24 @@ typedef struct
 
 MEMORY vmem;    // Virtual memory instance.
 
+// request_memory allocates sz bytes of memory for provided pointer.
+int request_memory (int sz)
+{
+    int tptr = sbrk(0);
+    int reqmem = sbrk(sz);
+    if (reqmem == -1)
+    {
+        return -1;
+    }
+
+    return tptr;
+}
+
 // find_swb returns physical adress of record in segment
 // table with the segment containing block of ptr.
 ST* find_swb (VA ptr)
 {
-    if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
+    if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
     {
         return NULL;
     }
@@ -42,7 +55,7 @@ ST* find_swb (VA ptr)
     ST* segm = vmem.te;
     while (segm->p != NULL)
     {
-        if (ptr > segm->va) // TODO
+        if (ptr > (VA)segm->va)
         {
             return segm;
         }
@@ -61,19 +74,31 @@ int _malloc (VA* ptr, size_t szBlock)
 	}
 
     ST* segm = vmem.te;
-    vmem.te = malloc(sizeof(ST));
+
+    int addr = request_memory(sizeof(ST));
+    if (addr == -1)
+    {
+        return 1;
+    }
+    vmem.te = addr;
+
+    addr = request_memory(szBlock * sizeof(VA));
+    if (addr == -1)
+    {
+        return 1;
+    }
+    *ptr = addr;
+
     vmem.te->va = segm->va + segm->l;
     vmem.te->l = szBlock;
     vmem.te->p = segm;
-
-    *ptr = malloc(szBlock * sizeof(VA));
 
     return 0;
 }
 
 int _free (VA ptr)
 {
-    if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
+    if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
     {
         return -1;
     }
@@ -89,7 +114,7 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
+	if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
 	{
 		return -1;
 	}
@@ -106,7 +131,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
     for (int i = 0; i < szBuffer; i++)
     {
-        *(pBuffer + i) = *(segment_pa(segm) + i);   // TODO
+        *((VA*)(pBuffer + i)) = *(segment_pa(segm) + i);   // TODO
     }
 
     return 0;
@@ -114,7 +139,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > eo_alloc(vmem.te))) // TODO
+	if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
     {
 		return -1;
 	}
@@ -131,7 +156,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
 
     for (int i = 0; i < szBuffer; i++)
     {
-        *(segment_pa(segm) + i) = *(pBuffer + i);   // TODO
+        *(segment_pa(segm) + i) = *((VA*)(pBuffer + i));   // TODO
     }
 
     return 0;
@@ -144,7 +169,13 @@ int s_init (int n, int szPage)
 		return -1;
 	}
 
-	vmem.b = malloc(n * szPage * sizeof(VA*));
+    int addr = request_memory(n * szPage * sizeof(VA*));
+    if (addr == -1)
+    {
+        return 1;
+    }
+    vmem.b = addr;
+
     vmem.s = n * szPage;
 
 	return 0;
