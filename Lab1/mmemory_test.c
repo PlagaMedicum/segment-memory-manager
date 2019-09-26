@@ -2,33 +2,145 @@
 #include "mmemory_test.h"
 #include "mmemory.h"
 
-void _malloc_test ()
+#define PASS "PASS"
+#define FAIL_UNEXP "FAIL! Unexpected error"
+#define FAIL_WR_INP "FAIL! Wrong input parameters"
+
+void _init_test ()
 {
-    // TODO: int code = _malloc();
-    // printf("_malloc_test: %d", code);
+    printf("_init test:\n");
+    
+    int code = _init(1, 1);
+
+    char* result;
+    switch (code)
+    { 
+        case 0:
+            result = PASS;
+            break;
+        case 1:
+            result = FAIL_UNEXP;
+            break;
+        case -1:
+            result = FAIL_WR_INP;
+    }
+    printf("-- %s\n", result);
 }
 
+void _malloc_test ()
+{
+    printf("_malloc test:\n");
+
+    int code = _init(1, 1);
+
+    char* result;
+    switch (code)
+    { 
+        case 1:
+            result = FAIL_UNEXP;
+            break;
+        case -1:
+            result = FAIL_WR_INP;
+    }
+    if (result != NULL)
+    {
+        printf("-- (_init)%s\n", result);
+        return;
+    }
+
+    char* ptr;
+    code = _malloc(&ptr, 3);
+
+    switch (code)
+    { 
+        case 0:
+            result = PASS;
+            break;
+        case 1:
+            result = FAIL_UNEXP;
+            break;
+        case -1:
+            result = FAIL_WR_INP;
+    }
+    printf("-- %s\n", result);
+}
+
+/*
 void _free_test ()
 {
-    // TODO: int code = _free();
-    // printf("_free_test: %d", code);
+    printf("_free test:\n");
+    
+    int code = _free();
+    
+    char* result;
+    switch (code)
+    { 
+        case 0:
+            result = PASS;
+            break;
+        case 1:
+            result = FAIL_UNEXP;
+            break;
+        case -1:
+            result = FAIL_WR_INP;
+    }
+    printf("-- %s\n", result);
 }
 
 void _read_test ()
 {
-    // TODO: int code = _read();
-    // printf("_read_test: %d", code);
+    printf("_read test:\n");
+    
+    int code = _read();
+    
+    char* result;
+    switch (code)
+    { 
+        case 0:
+            result = PASS;
+            break;
+        case 1:
+            result = FAIL_UNEXP;
+            break;
+        case -1:
+            result = FAIL_WR_INP;
+    }
+    printf("-- %s\n", result);
+
 }
 
 void _write_test ()
 {
-    // TODO: int code = _write();
-    // printf("_wtrite_test: %d", code);
+    printf("_write test:\n");
+    
+    int code = _write();
+    
+    char* result;
+    switch (code)
+    { 
+        case 0:
+            result = PASS;
+            break;
+        case 1:
+            result = FAIL_UNEXP;
+            break;
+        case -1:
+            result = FAIL_WR_INP;
+    }
+    printf("-- %s\n", result);
 }
+*/
 
-void _init_test ()
+int main (int argc, char** argv)
 {
-    int code = _init(1, 1);
-    printf("_init_test: %d", code);
+    _init_test();
+    _malloc_test();
+/*
+    _free_test();
+    _read_test();
+    _write_test();
+*/
+
+	return 0;
 }
 
