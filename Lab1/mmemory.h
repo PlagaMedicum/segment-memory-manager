@@ -3,9 +3,9 @@
 
 #include <stddef.h>
 
-typedef char* VA;	// Тип описывающий адрес блока 
-
 #define _init(x, y) s_init(x, y)
+
+typedef char* VA;	// Тип описывающий адрес блока 
 
 /**
  	@func	_malloc	

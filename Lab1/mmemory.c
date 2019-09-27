@@ -1,27 +1,30 @@
 #include "mmemory.h"
 #include <stdbool.h>
 #include <unistd.h>
-#include <stdio.h>  // TODO: remove it
+#include <stdio.h>  // TODO: remove it after debug
+#include <assert.h>
 
-// free_spaceof gets amount of free space in the memory x.
-#define free_spaceof(x) (x.s - (size_t)(x.te->va + x.te->l) * sizeof(VA))
-// TODO: Segmentation fault here...
-
-// segm_end gets VA of last allocated block of the segment x.
+// segm_end returns VA of last allocated block of the segment x.
 #define segm_end(x) (x->va + x->l)
 
-// segment_pa gets physical address of the segment x in vmem.
-#define segment_pa(x) (vmem.b + (size_t)x->va * sizeof(VA))
+// segment_pa returns physical address of the segment x in mmem.
+#define segment_pa(x) (mmem.b + (size_t)x->va * sizeof(VA))
+
+// ocup_space returns occupied space in memory mem.
+#define ocup_space(mem)((size_t)mem.te->va + mem.te->l)
+
+// free_spaceof returns amount of free space in the memory mem.
+#define free_space(mem) (mem.s - ocup_space(mmem))
 
 // ST is a stack that represents segments table.
 typedef struct ST
 {
-	VA va;                  // Segment VA. 
-    size_t l;               // Length of the segment.
-	struct ST* p;           // Physical address of prev segment's VA.
+	VA va;          // Segment VA. 
+    size_t l;       // Length of the segment.
+	struct ST* p;   // Physical address of prev segment's VA.
 } ST;
 
-// MEMORY represents virtual memory
+// MEMORY represents virtual address space.
 typedef struct
 {
 	VA b;		    // Points to the first block of memory.
@@ -29,13 +32,13 @@ typedef struct
     ST* te;         // Points to the ending of segments table stack.
 } MEMORY;
 
-static MEMORY vmem;    // Virtual memory instance.
+static MEMORY mmem; // Virtual address space instance.
 
 // request_memory allocates sz bytes of memory for provided pointer.
-int request_memory (int sz)
+int request_memory (size_t sz)
 {
     //int tptr = sbrk(0);
-    int reqmem = sbrk(sz);
+    size_t reqmem = sbrk(sz);
     if (reqmem == -1)
     {
         return -1;
@@ -48,12 +51,12 @@ int request_memory (int sz)
 // table with the segment containing block of ptr.
 ST* find_swb (VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
+    if ((ptr < 0) || (ptr > (VA)segm_end(mmem.te)))
     {
         return NULL;
     }
 
-    ST* segm = vmem.te;
+    ST* segm = mmem.te;
     while (segm->p != NULL)
     {
         if (ptr > (VA)segm->va)
@@ -69,19 +72,21 @@ ST* find_swb (VA ptr)
 
 int _malloc (VA* ptr, size_t szBlock)
 {
-	if (szBlock > free_spaceof(vmem))
+	if (szBlock > free_space(mmem))
+    // TODO: Segmentation fault here...
 	{
+        puts("Hello there, Gordon Freeman!");
 		return -2;
 	}
 
-    ST* segm = vmem.te;
+    ST* segm = mmem.te;
 
     size_t addr = request_memory(sizeof(ST*));
     if (addr == -1)
     {
         return 1;
     }
-    vmem.te = (ST*)addr;
+    mmem.te = (ST*)addr;
 
     addr = request_memory(szBlock * sizeof(VA));
     if (addr == -1)
@@ -90,16 +95,16 @@ int _malloc (VA* ptr, size_t szBlock)
     }
     *ptr = (VA)addr;
 
-    vmem.te->va = segm->va + segm->l;
-    vmem.te->l = szBlock;
-    vmem.te->p = segm;
+    mmem.te->va = segm->va + segm->l;
+    mmem.te->l = szBlock;
+    mmem.te->p = segm;
 
     return 0;
 }
 
 int _free (VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
+    if ((ptr < 0) || (ptr > (VA)segm_end(mmem.te)))
     {
         return -1;
     }
@@ -115,7 +120,7 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
+	if ((ptr < 0) || (ptr > (VA)segm_end(mmem.te)))
 	{
 		return -1;
 	}
@@ -140,7 +145,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
+	if ((ptr < 0) || (ptr > (VA)segm_end(mmem.te)))
     {
 		return -1;
 	}
@@ -170,14 +175,18 @@ int s_init (int n, int szPage)
 		return -1;
 	}
 
-    size_t addr = request_memory(n * szPage * sizeof(VA*));
+    size_t addr = request_memory(n * szPage);
     if (addr == -1)
     {
         return 1;
     }
-    vmem.b = (VA)addr;
+    mmem.b = (VA)addr;
 
-    vmem.s = n * szPage;
+    mmem.te->va = 0;
+    mmem.te->l = 0;
+    mmem.s = n * szPage;
+    assert(mmem.s > ocup_space(mmem));
+    // TODO: Segmentation fault here...
 
 	return 0;
 }

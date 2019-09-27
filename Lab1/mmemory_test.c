@@ -5,7 +5,9 @@
 #define PASS "PASS"
 #define FAIL_UNEXP "FAIL! Unexpected error"
 #define FAIL_WR_INP "FAIL! Wrong input parameters"
+#define FAIL_BOUND "FAIL! Access beyoud the segment"
 
+// code_to_str converts provided code to string.
 void code_to_str (int code, char** str)
 {
     switch (code)
@@ -18,6 +20,9 @@ void code_to_str (int code, char** str)
             break;
         case -1:
             *str = FAIL_WR_INP;
+            break;
+        case -2:
+            *str = FAIL_BOUND;
     }
 }
 
@@ -66,8 +71,7 @@ void _write_test ()
         printf("-- (_init)%s\n", res);
         return;
     }
-
-
+    
     char* buf = "Anarchy in UK!";
     code = _write((VA)1, &buf, sizeof(char) * sizeof(buf));
     code_to_str(code, &res);
