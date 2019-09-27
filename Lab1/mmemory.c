@@ -35,7 +35,7 @@ typedef struct
 static MEMORY mmem; // Virtual address space instance.
 
 // request_memory allocates sz bytes of memory for provided pointer.
-int request_memory (size_t sz)
+size_t request_memory (size_t sz)
 {
     //int tptr = sbrk(0);
     size_t reqmem = sbrk(sz);
@@ -181,7 +181,8 @@ int s_init (int n, int szPage)
         return 1;
     }
     mmem.b = (VA)addr;
-
+    
+    mmem.te = (ST*)request_memory(sizeof(ST*));
     mmem.te->va = 0;
     mmem.te->l = 0;
     mmem.s = n * szPage;
