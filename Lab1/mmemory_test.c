@@ -6,25 +6,32 @@
 #define FAIL_UNEXP "FAIL! Unexpected error"
 #define FAIL_WR_INP "FAIL! Wrong input parameters"
 
+void code_to_str (int code, char** str)
+{
+    switch (code)
+    { 
+        case 0:
+            *str = PASS;
+            break;
+        case 1:
+            *str = FAIL_UNEXP;
+            break;
+        case -1:
+            *str = FAIL_WR_INP;
+    }
+}
+
 void _init_test ()
 {
     printf("_init test:\n");
     
-    int code = _init(1, 1);
-
-    char* result;
-    switch (code)
-    { 
-        case 0:
-            result = PASS;
-            break;
-        case 1:
-            result = FAIL_UNEXP;
-            break;
-        case -1:
-            result = FAIL_WR_INP;
+    int code[2] = {_init(1, 1), _init(3, 3)};
+    char* res;
+    for (int i = 0; i < sizeof(code)/sizeof(int); i++)
+    {
+        code_to_str(code[i], &res);
+        printf("-- %s\n", res);
     }
-    printf("-- %s\n", result);
 }
 
 void _malloc_test ()
@@ -32,114 +39,88 @@ void _malloc_test ()
     printf("_malloc test:\n");
 
     int code = _init(1, 1);
-
-    char* result;
-    switch (code)
-    { 
-        case 1:
-            result = FAIL_UNEXP;
-            break;
-        case -1:
-            result = FAIL_WR_INP;
-    }
-    if (result != NULL)
+    char* res;
+    if (code != 0)
     {
-        printf("-- (_init)%s\n", result);
+        code_to_str(code, &res);
+        printf("-- (_init)%s\n", res);
         return;
     }
 
     char* ptr;
     code = _malloc(&ptr, 3);
-
-    switch (code)
-    { 
-        case 0:
-            result = PASS;
-            break;
-        case 1:
-            result = FAIL_UNEXP;
-            break;
-        case -1:
-            result = FAIL_WR_INP;
-    }
-    printf("-- %s\n", result);
-}
-
-/*
-void _free_test ()
-{
-    printf("_free test:\n");
-    
-    int code = _free();
-    
-    char* result;
-    switch (code)
-    { 
-        case 0:
-            result = PASS;
-            break;
-        case 1:
-            result = FAIL_UNEXP;
-            break;
-        case -1:
-            result = FAIL_WR_INP;
-    }
-    printf("-- %s\n", result);
-}
-
-void _read_test ()
-{
-    printf("_read test:\n");
-    
-    int code = _read();
-    
-    char* result;
-    switch (code)
-    { 
-        case 0:
-            result = PASS;
-            break;
-        case 1:
-            result = FAIL_UNEXP;
-            break;
-        case -1:
-            result = FAIL_WR_INP;
-    }
-    printf("-- %s\n", result);
-
+    code_to_str(code, &res);
+    printf("-- %s\n", res);
 }
 
 void _write_test ()
 {
     printf("_write test:\n");
     
-    int code = _write();
-    
-    char* result;
-    switch (code)
-    { 
-        case 0:
-            result = PASS;
-            break;
-        case 1:
-            result = FAIL_UNEXP;
-            break;
-        case -1:
-            result = FAIL_WR_INP;
+    // TODO: malloc
+    int code = _init(1, 1);
+    char* res;
+    if (code != 0)
+    {
+        code_to_str(code, &res);
+        printf("-- (_init)%s\n", res);
+        return;
     }
-    printf("-- %s\n", result);
+
+
+    char* buf = "Anarchy in UK!";
+    code = _write((VA)1, &buf, sizeof(char) * sizeof(buf));
+    code_to_str(code, &res);
+    printf("-- %s\n", res);
 }
-*/
+
+void _read_test ()
+{
+    printf("_read test:\n");
+    
+    // TODO: malloc, write
+    int code = _init(1, 1);
+    char* res;
+    if (code != 0)
+    {
+        code_to_str(code, &res);
+        printf("-- (_init)%s\n", res);
+        return;
+    }
+
+    char* buf;
+    code = _read((VA)1, &buf, sizeof(char) * 3);
+    code_to_str(code, &res);
+    printf("-- %s\n", res);
+
+}
+
+void _free_test ()
+{
+    printf("_free test:\n");
+
+    // TODO: malloc, write
+    int code = _init(1, 1);
+    char* res;
+    if (code != 0)
+    {
+        code_to_str(code, &res);
+        printf("-- (_init)%s\n", res);
+        return;
+    }
+
+    code = _free((VA)1);
+    code_to_str(code, &res);
+    printf("-- %s\n", res);
+}
 
 int main (int argc, char** argv)
 {
     _init_test();
     _malloc_test();
-/*
-    _free_test();
-    _read_test();
     _write_test();
-*/
+    _read_test();
+    _free_test();
 
 	return 0;
 }

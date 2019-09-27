@@ -1,53 +1,54 @@
 #include "mmemory.h"
 #include <stdbool.h>
 #include <unistd.h>
+#include <stdio.h>  // TODO: remove it
 
 // free_spaceof gets amount of free space in the memory x.
-#define free_spaceof(x) (x.s - (x.te->va + x.te->l) * sizeof(VA))
+#define free_spaceof(x) (x.s - (size_t)(x.te->va + x.te->l) * sizeof(VA))
+// TODO: Segmentation fault here...
 
-// eo_alloc gets VA of last allocated block of the segment x.
-#define eo_alloc(x) (x->va + x->l)
+// segm_end gets VA of last allocated block of the segment x.
+#define segm_end(x) (x->va + x->l)
 
 // segment_pa gets physical address of the segment x in vmem.
-#define segment_pa(x) (vmem.b + x->va * sizeof(VA))
+#define segment_pa(x) (vmem.b + (size_t)x->va * sizeof(VA))
 
 // ST is a stack that represents segments table.
-typedef struct
+typedef struct ST
 {
-	size_t va;              // Segment VA. 
-                            // TODO: Maybe need to change size_t -> VA.
+	VA va;                  // Segment VA. 
     size_t l;               // Length of the segment.
 	struct ST* p;           // Physical address of prev segment's VA.
 } ST;
 
 // MEMORY represents virtual memory
-typedef struct 
+typedef struct
 {
 	VA b;		    // Points to the first block of memory.
 	size_t s;	    // Number of blocks in memory.
     ST* te;         // Points to the ending of segments table stack.
 } MEMORY;
 
-MEMORY vmem;    // Virtual memory instance.
+static MEMORY vmem;    // Virtual memory instance.
 
 // request_memory allocates sz bytes of memory for provided pointer.
 int request_memory (int sz)
 {
-    int tptr = sbrk(0);
+    //int tptr = sbrk(0);
     int reqmem = sbrk(sz);
     if (reqmem == -1)
     {
         return -1;
     }
 
-    return tptr;
+    return reqmem;
 }
 
 // find_swb returns physical adress of record in segment
 // table with the segment containing block of ptr.
 ST* find_swb (VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
+    if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
     {
         return NULL;
     }
@@ -60,7 +61,7 @@ ST* find_swb (VA ptr)
             return segm;
         }
 
-        segm = segm->p; // TODO
+        segm = segm->p;
     }
 
     return NULL;
@@ -75,19 +76,19 @@ int _malloc (VA* ptr, size_t szBlock)
 
     ST* segm = vmem.te;
 
-    int addr = request_memory(sizeof(ST));
+    size_t addr = request_memory(sizeof(ST*));
     if (addr == -1)
     {
         return 1;
     }
-    vmem.te = addr;
+    vmem.te = (ST*)addr;
 
     addr = request_memory(szBlock * sizeof(VA));
     if (addr == -1)
     {
         return 1;
     }
-    *ptr = addr;
+    *ptr = (VA)addr;
 
     vmem.te->va = segm->va + segm->l;
     vmem.te->l = szBlock;
@@ -98,7 +99,7 @@ int _malloc (VA* ptr, size_t szBlock)
 
 int _free (VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
+    if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
     {
         return -1;
     }
@@ -114,7 +115,7 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
+	if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
 	{
 		return -1;
 	}
@@ -131,7 +132,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
     for (int i = 0; i < szBuffer; i++)
     {
-        *((VA*)(pBuffer + i)) = *(segment_pa(segm) + i);   // TODO
+        *((VA*)(pBuffer + i)) = *((VA*)(segment_pa(segm) + i));
     }
 
     return 0;
@@ -139,7 +140,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)eo_alloc(vmem.te)))
+	if ((ptr < 0) || (ptr > (VA)segm_end(vmem.te)))
     {
 		return -1;
 	}
@@ -156,7 +157,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
 
     for (int i = 0; i < szBuffer; i++)
     {
-        *(segment_pa(segm) + i) = *((VA*)(pBuffer + i));   // TODO
+        *((VA*)(segment_pa(segm) + i)) = *((VA*)(pBuffer + i));
     }
 
     return 0;
@@ -169,12 +170,12 @@ int s_init (int n, int szPage)
 		return -1;
 	}
 
-    int addr = request_memory(n * szPage * sizeof(VA*));
+    size_t addr = request_memory(n * szPage * sizeof(VA*));
     if (addr == -1)
     {
         return 1;
     }
-    vmem.b = addr;
+    vmem.b = (VA)addr;
 
     vmem.s = n * szPage;
 
