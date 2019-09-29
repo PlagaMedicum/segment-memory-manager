@@ -73,9 +73,7 @@ ST* find_swb (VA ptr)
 int _malloc (VA* ptr, size_t szBlock)
 {
 	if (szBlock > free_space(mmem))
-    // TODO: Segmentation fault here...
 	{
-        puts("Hello there, Gordon Freeman!");
 		return -2;
 	}
 
@@ -186,9 +184,8 @@ int s_init (int n, int szPage)
     mmem.te->va = 0;
     mmem.te->l = 0;
     mmem.s = n * szPage;
-    assert(mmem.s > ocup_space(mmem));
-    // TODO: Segmentation fault here...
-
-	return 0;
+    //assert(mmem.s > ocup_space(mmem));
+	
+    return 0;
 }
 
