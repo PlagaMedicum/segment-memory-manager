@@ -1,5 +1,6 @@
 #include "mmemory.h"
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>  // TODO: remove it after debug
 
 // ST is a queue that represents segments table.
@@ -37,18 +38,24 @@ void upd_ls()
     }
 }
 
-// s_len returns VA of last allocated block of the segment s.
-size_t s_len (const ST* s)
+// s_end returns VA of last allocated block of the segment s.
+size_t s_end (const ST* s)
 {
     if(s->n == NULL)
     {
-        return -1;
+        return 0;
     }
     return (size_t)s->n->va - 1;
 }
 
 // free_spaceof returns amount of free space in the memory.
-#define free_space() (mmem.sz - s_len(mmem.ls))
+#define free_space() (mmem.sz - s_end(mmem.ls))
+
+// s_len returns number of elements in segment s.
+size_t s_len (const ST* s)
+{
+    return s_end(s) - (size_t)s->va;
+}
 
 // rqmem allocates sz bytes of memory for provided pointer.
 size_t rqmem (const size_t sz)
@@ -66,7 +73,7 @@ size_t rqmem (const size_t sz)
 // which ptr belongs to.
 ST* ptrs (const VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)s_len(mmem.ls)))
+    if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
     {
         return NULL;
     }
@@ -112,7 +119,7 @@ int _malloc (VA* ptr, size_t szBlock)
 
 int _free (VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)s_len(mmem.ls)))
+    if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
     {
         return -1;
     }
@@ -122,31 +129,46 @@ int _free (VA ptr)
     {
         return 1;
     }
+    
+    ST* fr_s = s;
 
     size_t shift;
     while(s->n != NULL)
     {
-        shift = (size_t)s->n->va - (size_t)s->va;
-        s = s->n;
-        for(size_t el = mmem.pa + (size_t)s->va; el < s_len(s); el++)
+        shift = s_len(s);
+        s->n->va = s->va;
+        for(size_t el = mmem.pa + (size_t)s->va; el < mmem.pa + s_end(s); el++)
         {
-            *((VA)(el - shift)) = *((VA)el);
             *((VA)el) = 0;
         }
+        s = s->n;
+        for(size_t el = mmem.pa + (size_t)s->va; el < mmem.pa + s_end(s); el++)
+        {
+            *((VA)(el - shift)) = *((VA)el);
+        }
     }
+
+    ST* prev = mmem.fs;
+    while(prev->n != fr_s)
+    {
+        prev = prev->n;
+    }
+    
+    prev->n = fr_s->n;
+    free(fr_s);
 
     return 0;
 }
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)s_len(mmem.ls)))
+	if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
 	{
 		return -1;
 	}
     
     ST* s = ptrs(ptr);
-    if (szBuffer > s_len(s))
+    if (szBuffer > s_end(s))
     {
         return -2;
     }
@@ -165,7 +187,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)s_len(mmem.ls)))
+	if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
     {
 		return -1;
 	}
