@@ -20,10 +20,10 @@ typedef struct
 
 static MEMORY mmem; // Virtual address space instance.
 
-// s_pa returns physical address of the segment x in mmem.
-#define s_pa(x) (mmem.pa + (size_t)x->va)
+// s_pa returns physical address of the segment s in mmem.
+#define s_pa(s) (mmem.pa + (size_t)s->va)
 
-// last_s updates last segment of the table.
+// last_s updates last valuable segment(next is not null) of the table.
 ST* last_s()
 {
     ST* s = mmem.fs;
@@ -54,7 +54,12 @@ size_t s_end (const ST* s)
 // s_len returns number of elements in segment s.
 size_t s_len (const ST* s)
 {
-    return s_end(s) - (size_t)s->va + 1;
+    size_t end = s_end(s);
+    if(end == 0)
+    {
+        return 0;
+    }
+    return (end + 1) - (size_t)s->va;
 }
 
 // rqmem allocates sz bytes of memory for provided pointer.
@@ -107,7 +112,7 @@ int _malloc (VA* ptr, size_t szBlock)
     *ptr = (VA)addr;
 
     ST* s = last_s();
-    if(s->n != NULL)
+    while(s->n != NULL)
     {
         s = s->n;
     }
@@ -187,7 +192,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
+	if ((ptr < 0) || (ptr > (VA)s_end(last_s())))   // TODO: Segmentation here
     {
 		return -1;
 	}
