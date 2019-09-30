@@ -16,7 +16,6 @@ typedef struct
 	size_t pa;		// Physical address of first block.
 	size_t sz;	    // Number of blocks in memory.
     ST* fs;         // Points to the first segment in the table.
-    ST* ls;         // Points to the last segment in the table.
 } MEMORY;
 
 static MEMORY mmem; // Virtual address space instance.
@@ -24,18 +23,19 @@ static MEMORY mmem; // Virtual address space instance.
 // s_pa returns physical address of the segment x in mmem.
 #define s_pa(x) (mmem.pa + (size_t)x->va)
 
-// upd_ls updates last segment of the table.
-void upd_ls()
+// last_s updates last segment of the table.
+ST* last_s()
 {
-    ST* s = mmem.ls;
+    ST* s = mmem.fs;
     if(s->n == NULL)
     {
-        return;
+        return s;
     }
     while(s->n->n != NULL)
     {
         s = s->n;
     }
+    return s;
 }
 
 // s_end returns VA of last allocated block of the segment s.
@@ -49,12 +49,12 @@ size_t s_end (const ST* s)
 }
 
 // free_spaceof returns amount of free space in the memory.
-#define free_space() (mmem.sz - s_end(mmem.ls))
+#define free_space() (mmem.sz - s_end(last_s()))
 
 // s_len returns number of elements in segment s.
 size_t s_len (const ST* s)
 {
-    return s_end(s) - (size_t)s->va;
+    return s_end(s) - (size_t)s->va + 1;
 }
 
 // rqmem allocates sz bytes of memory for provided pointer.
@@ -73,7 +73,7 @@ size_t rqmem (const size_t sz)
 // which ptr belongs to.
 ST* ptrs (const VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
+    if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
     {
         return NULL;
     }
@@ -106,7 +106,7 @@ int _malloc (VA* ptr, size_t szBlock)
     }
     *ptr = (VA)addr;
 
-    ST* s = mmem.ls;
+    ST* s = last_s();
     if(s->n != NULL)
     {
         s = s->n;
@@ -119,7 +119,7 @@ int _malloc (VA* ptr, size_t szBlock)
 
 int _free (VA ptr)
 {
-    if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
+    if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
     {
         return -1;
     }
@@ -162,13 +162,13 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
+	if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
 	{
 		return -1;
 	}
     
     ST* s = ptrs(ptr);
-    if (szBuffer > s_end(s))
+    if (szBuffer > s_len(s))
     {
         return -2;
     }
@@ -187,7 +187,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
-	if ((ptr < 0) || (ptr > (VA)s_end(mmem.ls)))
+	if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
     {
 		return -1;
 	}
