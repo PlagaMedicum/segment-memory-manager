@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "mmemory_test.h"
 #include "mmemory.h"
 
 #define PASS "PASS"
 #define FAIL_UNEXP "FAIL! Unexpected error"
 #define FAIL_WR_INP "FAIL! Wrong input parameters"
-#define FAIL_BOUND "FAIL! Access beyoud the segment"
+#define FAIL_SF "FAIL! Access beyoud the segment"
 
 // code_to_str converts provided code to string.
 char* code_to_str (const int code)
@@ -20,7 +21,7 @@ char* code_to_str (const int code)
         case -1:
             return FAIL_WR_INP;
         case -2:
-            return FAIL_BOUND;
+            return FAIL_SF;
     }
     return NULL;
 }
@@ -95,7 +96,10 @@ void _read_test ()
 {
     printf("\n_read test:\n");
     
-    const char* buf = "Hi";
+    char buf[] = "Hi";
+
+    assert(*(buf + 3) == '\0');
+
     const int len = strlen(buf) + 1;
     const size_t va = 1;
 
@@ -113,6 +117,7 @@ void _read_test ()
         printf("-- (_malloc)%s\n", code_to_str(code));
         return;
     }
+    
     if (ptr == NULL)
     {
         printf("-- (_malloc)FAIL! Pointer is NULL.");
@@ -126,13 +131,17 @@ void _read_test ()
         return;
     }
 
-    char* rbuf;
+    char rbuf[3];
     code = _read((VA) va, &rbuf, len);
+    
+    assert(*(rbuf + 3) == '\0');
+
     if (code != 0)
     {
         printf("-- (_read)%s\n", code_to_str(code));
         return;
     }
+    
     if (strcmp(buf, rbuf))
     {
         printf("-- (_read)FAIL!\n\

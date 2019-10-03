@@ -3,6 +3,11 @@
 
 #include <stddef.h>
 
+#define RC_SUCCESS 0
+#define RC_ERR_U 1
+#define RC_ERR_INPUT -1
+#define RC_ERR_SF -2
+
 #define _init(x, y) s_init(x, y)
 
 typedef char* VA;	// Тип описывающий адрес блока 
