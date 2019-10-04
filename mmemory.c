@@ -1,8 +1,6 @@
 #include "mmemory.h"
 #include <unistd.h>
-#include <stdlib.h>
 #include <assert.h>
-#include <stdio.h>  // TODO: remove it after debug
 
 // ST is a queue that represents segments table.
 typedef struct _segment_table
@@ -33,8 +31,8 @@ size_t s_pa (const ST* s)
 // Note: Cannot make it static because o _free.
 //
 // Examples:
-// fs->va == 0; fs->n == NULL                   --> fs
-// fs->va == 0; fs->n != NULL; fs->n->n == NULL --> fs
+// fs->va == 0, fs->n == NULL                   --> fs
+// fs->va == 0, fs->n != NULL, fs->n->n == NULL --> fs
 ST* last_s()
 {
     ST* s = mmem.fs;
@@ -48,7 +46,11 @@ ST* last_s()
         return s;
     }
 
-    assert(s->n->va > s->va);
+    if (s->n->va <= s->va)
+    {
+        printf("\nsnva = %ld sva = %ld\n", (size_t)s->n->va, (size_t)s->va);
+        assert(s->n->va > s->va);
+    }
 
     while (s->n->n != NULL)
     {
@@ -65,9 +67,9 @@ ST* last_s()
 // svan -- starting va of next segment.
 //
 // Examples:
-// va == 0; n == NULL --> s_end = 0
-// va == 0; n->va = 1 --> s_end = 1 - 1 = 0
-// va == 0; n->va = 3 --> s_end = 3 - 1 = 2
+// va == 0, n == NULL  --> s_end = 0
+// va == 0, n->va == 1 --> s_end = 1 - 1 = 0
+// va == 0, n->va == 3 --> s_end = 3 - 1 = 2
 size_t s_end (const ST* s)
 {
     assert(s != NULL);
@@ -92,6 +94,9 @@ size_t s_end (const ST* s)
 // s_len = svan - svac,
 // svan -- starting va of next segment,
 // svac -- starting va of current segment.
+//
+// Examples:
+// va == 0, n->va == 3 --> s_len = 3 - 0 = 3
 size_t s_len (const ST* s)
 {
     assert(s != NULL);
@@ -109,7 +114,6 @@ size_t rqmem (const size_t sz)
 {
     if (sz < 1)
     {
-        // TODO: Change error codes.
         return RC_ERR_INPUT;
     }
 
@@ -120,7 +124,7 @@ size_t rqmem (const size_t sz)
     return addr;
 }
 
-// ptrs writes physical adress of the segment,
+// ptrs writes physical address of the segment,
 // which ptr belongs to, in s.
 int ptrs (const VA ptr, ST** s)
 {
@@ -136,7 +140,7 @@ int ptrs (const VA ptr, ST** s)
     ST* temp_s = mmem.fs;
     while (temp_s->n != NULL)
     {
-        if (ptr > (VA)temp_s->va)
+        if (ptr < (VA)temp_s->n->va)
         {
             *s = temp_s;
             return RC_SUCCESS;
@@ -156,15 +160,11 @@ int _malloc (VA* ptr, size_t szBlock)
 	}
 
     size_t addr = rqmem(szBlock);
-    if (addr == -1)
-    {
-        return addr;
-    }
 
     *ptr = (VA)addr;
     if (ptr == NULL)
     {
-        return 1;
+        return RC_ERR_U;
     }
 
     ST* s = last_s();
@@ -177,83 +177,81 @@ int _malloc (VA* ptr, size_t szBlock)
     }
 
     addr = rqmem(sizeof(ST));
-    if (addr == -1)
-    {
-        return addr;
-    }
     s->n = (ST*)addr;
     s->n->va = (VA)(szBlock + 1);
 
-    return 0;
+    return RC_SUCCESS;
 }
 
 int _free (VA ptr)
 {
     ST* s;
     int code = ptrs(ptr, &s);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         return code;
     }
-    
-    ST* freeing_s = s;
 
-    size_t shift;
-    while (s->n != NULL)
+    assert (s->n != NULL);
+
+    size_t shift = s_len(s);
+    while (s->n->n != NULL)
     {
-        shift = s_len(s);
-
-        s->n->va = s->va;
-
-        // Fill all previous segment by 0s.
-        // TODO: Need to shift by freeing segment.
-        for (size_t el = mmem.pa + (size_t)s->va; el < (size_t)(mmem.pa + s->va + shift); el++)
-        {
-            assert((VA)el != NULL);
-
-            *((VA)el) = 0;
-        }
-
         s = s->n;
 
-        // Shift all elements of the segment back.
-        // TODO: see ^previous TODO^.
-        for (size_t el = mmem.pa + (size_t)s->va; el < (size_t)(mmem.pa + s->va + shift); el++)
+        // Shifting va of the next segment.
+        s->n->va = s->n->va - shift;
+
+        // Shift back all elements of the segment and zero the old place.
+        for (size_t el = mmem.pa + (size_t)s->va; el <= (size_t)(mmem.pa + s_end(s)); el++)
         {
+            assert((VA)(el) != NULL);
             assert((VA)(el - shift) != NULL);
 
             *((VA)(el - shift)) = *((VA)el);
+            *((VA)el) = 0;
         }
     }
 
+    assert(s->n != NULL);
+
+    // Shifting the ending of allocated address space.
+    s->n->va = s->n->va - shift;
+
     assert(mmem.fs != NULL);
 
+    // Udating connections in the addresses queue.
     ST* prev = mmem.fs;
-    while (prev->n != freeing_s)
+    while ((prev != s) && (prev->n != s))
     {
-        prev = prev->n;
-        
-        assert(prev != NULL); // TODO: Assertion fault
-    }
-    
-    prev->n = freeing_s->n;
-    free(freeing_s);
+        assert(prev != NULL);
 
-    return 0;
+        prev = prev->n;
+    }
+    if (prev == s)
+    {
+        prev->n = prev->n->n;
+    }
+    else
+    {
+        prev->n = s->n;
+    }
+
+    return RC_SUCCESS;
 }
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
     ST* s;
     int code = ptrs(ptr, &s);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         return code;
     }
 
     if (szBuffer > s_len(s))
     {
-        return -2;
+        return RC_ERR_SF;
     }
 
     VA buf_el;
@@ -269,21 +267,21 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
         *buf_el = *s_el;
     }
 
-    return 0;
+    return RC_SUCCESS;
 }
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
     ST* s;
     int code = ptrs(ptr, &s);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         return code;
     }
 
     if (szBuffer > s_len(s))
     {
-        return -2;
+        return RC_ERR_SF;
     }
 
     VA buf_el;
@@ -298,35 +296,27 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
         *s_el = *buf_el;
     }
 
-    return 0;
+    return RC_SUCCESS;
 }
 
 int s_init (int n, int szPage)
 {
 	if ((n < 1) || (szPage < 1))
 	{
-		return -1;
+		return RC_ERR_INPUT;
 	}
 
     size_t addr = rqmem(n * szPage);
-    if (addr == -1)
-    {
-        return addr;
-    }
     mmem.pa = addr;
     
     addr = rqmem(sizeof(ST));
-    if (addr == -1)
-    {
-        return addr;
-    }
     mmem.fs = (ST*)addr;
     mmem.fs->va = 0;
 
     assert(mmem.fs->n == NULL);
 
-    mmem.sz = n * szPage + 1;
+    mmem.sz = n * szPage;
 	
-    return 0;
+    return RC_SUCCESS;
 }
 

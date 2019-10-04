@@ -14,13 +14,13 @@ char* code_to_str (const int code)
 {
     switch (code)
     { 
-        case 0:
+        case RC_SUCCESS:
             return PASS;
-        case 1:
+        case RC_ERR_U:
             return FAIL_UNEXP;
-        case -1:
+        case RC_ERR_INPUT:
             return FAIL_WR_INP;
-        case -2:
+        case RC_ERR_SF:
             return FAIL_SF;
     }
     return NULL;
@@ -44,7 +44,7 @@ void _malloc_test ()
     int len = 3;
 
     int code = _init(len, 1);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_init)%s\n", code_to_str(code));
         return;
@@ -54,7 +54,7 @@ void _malloc_test ()
     code = _malloc(&ptr, len);
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.");
+        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
         return;
     }
     printf("-- %s\n", code_to_str(code));
@@ -69,7 +69,7 @@ void _write_test ()
     const size_t va = 1;
     
     int code = _init(len, 1);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_init)%s\n", code_to_str(code));
         return;
@@ -77,14 +77,14 @@ void _write_test ()
 
     char* ptr;
     code = _malloc(&ptr, len);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_malloc)%s\n", code_to_str(code));
         return;
     }
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.");
+        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
         return;
     }
     
@@ -104,7 +104,7 @@ void _read_test ()
     const size_t va = 1;
 
     int code = _init(len, 1);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_init)%s\n", code_to_str(code));
         return;
@@ -112,7 +112,7 @@ void _read_test ()
 
     char* ptr;
     code = _malloc(&ptr, len);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_malloc)%s\n", code_to_str(code));
         return;
@@ -120,12 +120,12 @@ void _read_test ()
     
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.");
+        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
         return;
     }
 
     code = _write((VA) va, &buf, len);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_write)%s\n", code_to_str(code));
         return;
@@ -136,7 +136,7 @@ void _read_test ()
     
     assert(*(rbuf + 3) == '\0');
 
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_read)%s\n", code_to_str(code));
         return;
@@ -162,7 +162,7 @@ void _free_test ()
     const size_t va = 1;
 
     int code = _init(len, 1);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_init)%s\n", code_to_str(code));
         return;
@@ -170,41 +170,41 @@ void _free_test ()
  
     char* ptr;
     code = _malloc(&ptr, len);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_malloc)%s\n", code_to_str(code));
         return;
     }
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.");
+        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
         return;
     }
 
     code = _write((VA) va, &buf, len);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_write)%s\n", code_to_str(code));
         return;
     }
 
     code = _free((VA) va);
-    if (code != 0)
+    if (code != RC_SUCCESS)
     {
         printf("-- (_free)%s\n", code_to_str(code));
         return;
     }
-    
+
     char * rbuf;
     code = _read((VA) va, &rbuf, len);
-    if (code != 0)
+    if ((code != RC_SUCCESS) && (code != RC_ERR_SF))
     {
         printf("-- (_read)%s\n", code_to_str(code));
         return;
     }
     if (buf == rbuf)
     {
-        printf("-- (_read)FAIL! Reading from freed memory succeeded.");
+        printf("-- (_read)FAIL! Reading from freed memory succeeded.\n");
         return;
     }
 
