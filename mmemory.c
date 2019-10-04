@@ -1,5 +1,5 @@
 #include "mmemory.h"
-#include <unistd.h>
+#include <stdlib.h>
 #include <assert.h>
 
 // ST is a queue that represents segments table.
@@ -117,7 +117,7 @@ size_t rqmem (const size_t sz)
         return RC_ERR_INPUT;
     }
 
-    size_t addr = sbrk(sz);
+    size_t addr = (size_t)malloc(sz);
 
     assert(addr != -1);
 
@@ -236,6 +236,7 @@ int _free (VA ptr)
     {
         prev->n = s->n;
     }
+    free(s);
 
     return RC_SUCCESS;
 }

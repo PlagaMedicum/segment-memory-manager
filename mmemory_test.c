@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 #include "mmemory_test.h"
 #include "mmemory.h"
@@ -8,6 +9,10 @@
 #define FAIL_UNEXP "FAIL! Unexpected error"
 #define FAIL_WR_INP "FAIL! Wrong input parameters"
 #define FAIL_SF "FAIL! Access beyoud the segment"
+
+#define _T_START clock_t t_start = clock(), t_stop;
+#define _T_STOP t_stop = clock();
+#define _T_DIFF (double)(t_stop - t_start) / CLOCKS_PER_SEC
 
 // code_to_str converts provided code to string.
 char* code_to_str (const int code)
@@ -30,23 +35,29 @@ void _init_test ()
 {
     printf("\n_init test:\n");
     
+    _T_START
+
     int code[] = {_init(1, 1), _init(3, 3)};
     for (int i = 0; i < sizeof(code)/sizeof(int); i++)
     {
-        printf("-- %s\n", code_to_str(code[i]));
+        _T_STOP
+        printf("-- %s(%fsec)\n", code_to_str(code[i]), _T_DIFF);
     }
 }
 
 void _malloc_test ()
 {
     printf("\n_malloc test:\n");
-    
+     
+    _T_START
+
     int len = 3;
 
     int code = _init(len, 1);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_init)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_init)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
 
@@ -54,16 +65,20 @@ void _malloc_test ()
     code = _malloc(&ptr, len);
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
+        _T_STOP
+        printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
         return;
     }
-    printf("-- %s\n", code_to_str(code));
+    _T_STOP
+    printf("-- %s(%fsec)\n", code_to_str(code), _T_DIFF);
 }
 
 void _write_test ()
 {
     printf("\n_write test:\n");
-    
+     
+    _T_START
+
     const char* buf = "Hi";
     const int len = strlen(buf) + 1;
     const size_t va = 1;
@@ -71,7 +86,8 @@ void _write_test ()
     int code = _init(len, 1);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_init)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_init)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
 
@@ -79,23 +95,28 @@ void _write_test ()
     code = _malloc(&ptr, len);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_malloc)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_malloc)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
+        _T_STOP
+        printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
         return;
     }
     
     code = _write((VA) va, &buf, len);
-    printf("-- %s\n", code_to_str(code));
+    _T_STOP
+    printf("-- %s(%fsec)\n", code_to_str(code), _T_DIFF);
 }
 
 void _read_test ()
 {
     printf("\n_read test:\n");
-    
+     
+    _T_START
+
     char buf[] = "Hi";
 
     assert(*(buf + 3) == '\0');
@@ -106,7 +127,8 @@ void _read_test ()
     int code = _init(len, 1);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_init)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_init)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
 
@@ -114,20 +136,23 @@ void _read_test ()
     code = _malloc(&ptr, len);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_malloc)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_malloc)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
     
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
+        _T_STOP
+        printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
         return;
     }
 
     code = _write((VA) va, &buf, len);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_write)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_write)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
 
@@ -138,24 +163,29 @@ void _read_test ()
 
     if (code != RC_SUCCESS)
     {
-        printf("-- (_read)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_read)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
     
     if (strcmp(buf, rbuf))
     {
-        printf("-- (_read)FAIL!\n\
+        _T_STOP
+        printf("-- (_read)FAIL!(%fsec)\n\
                 \r\tExpected: %s\n\
                 \r\tGot:      %s\n", 
-                buf, rbuf);
+                _T_DIFF, buf, rbuf);
     }
 
-    printf("-- %s\n", PASS);
+    _T_STOP
+    printf("-- %s(%fsec)\n", PASS, _T_DIFF);
 }
 
 void _free_test ()
 {
     printf("\n_free test:\n");
+ 
+    _T_START
 
     const char* buf = "Hi";
     const int len = strlen(buf) + 1;
@@ -164,7 +194,8 @@ void _free_test ()
     int code = _init(len, 1);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_init)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_init)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
  
@@ -172,26 +203,30 @@ void _free_test ()
     code = _malloc(&ptr, len);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_malloc)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_malloc)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
     if (ptr == NULL)
     {
-        printf("-- (_malloc)FAIL! Pointer is NULL.\n");
+        _T_STOP
+        printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
         return;
     }
 
     code = _write((VA) va, &buf, len);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_write)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_write)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
 
     code = _free((VA) va);
     if (code != RC_SUCCESS)
     {
-        printf("-- (_free)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_free)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
 
@@ -199,16 +234,20 @@ void _free_test ()
     code = _read((VA) va, &rbuf, len);
     if ((code != RC_SUCCESS) && (code != RC_ERR_SF))
     {
-        printf("-- (_read)%s\n", code_to_str(code));
+        _T_STOP
+        printf("-- (_read)%s(%fsec)\n", code_to_str(code), _T_DIFF);
         return;
     }
     if (buf == rbuf)
     {
-        printf("-- (_read)FAIL! Reading from freed memory succeeded.\n");
+        _T_STOP
+        printf("-- (_read)FAIL! Reading from freed memory succeeded(%fsec)\n",
+                _T_DIFF);
         return;
     }
 
-    printf("-- %s\n", PASS);
+    _T_STOP
+    printf("-- %s(%fsec)\n", PASS, _T_DIFF);
 }
 
 int main (int argc, char** argv)
