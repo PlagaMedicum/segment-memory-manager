@@ -12,6 +12,21 @@
 
 typedef char* VA;	// Тип описывающий адрес блока 
 
+// ST is a queue that represents segments table.
+typedef struct _segment_table
+{
+	VA va;          // Segment VA.
+	struct _segment_table* n;   // Physical address of next segment's VA.
+} ST;
+
+// MEMORY represents virtual address space.
+typedef struct
+{
+	size_t pa;		// Physical address of first block.
+	size_t sz;	    // Number of blocks in memory.
+    ST* fs;         // Points to the first segment in the table.
+} MEMORY;
+
 /**
  	@func	_malloc	
  	@brief	Выделяет блок памяти определенного размера
@@ -86,7 +101,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer);
 	@retval	-1	неверные параметры
 	@retval	1	неизвестная ошибка
  **/
-int s_init (int n, int szPage);
+int _init (int n, int szPage);
 
 #endif
 

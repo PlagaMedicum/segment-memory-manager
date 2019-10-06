@@ -3,7 +3,6 @@
 #include <time.h>
 #include <assert.h>
 #include "mmemory_test.h"
-#include "mmemory.h"
 
 #define PASS "PASS"
 #define FAIL_UNEXP "FAIL! Unexpected error"
@@ -31,7 +30,11 @@ char* code_to_str (const int code)
     return NULL;
 }
 
-void _init_test ()
+// TODO: Rewrite tests with prepared structures for virtual address space.
+// TODO: Prepare load tests. Analyze problems of model, describe it and
+// choose required variables for creating graphics.
+
+void test_init ()
 {
     printf("\n_init test:\n");
     
@@ -45,15 +48,15 @@ void _init_test ()
     }
 }
 
-void _malloc_test ()
+void test_malloc ()
 {
     printf("\n_malloc test:\n");
      
     _T_START
+    
+    
 
-    int len = 3;
-
-    int code = _init(len, 1);
+    int code = _init(18, 1);
     if (code != RC_SUCCESS)
     {
         _T_STOP
@@ -61,19 +64,22 @@ void _malloc_test ()
         return;
     }
 
-    char* ptr;
-    code = _malloc(&ptr, len);
-    if (ptr == NULL)
+    char* ptr[3];
+    int codes[] = {_malloc(&ptr[0], 3), _malloc(&ptr[1], 6), _malloc(&ptr[2], 9)};
+    for (int i = 0; i < sizeof(codes)/sizeof(int); i++)
     {
+        if (ptr[i] == NULL)
+        {
+            _T_STOP
+            printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
+            return;
+        }
         _T_STOP
-        printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
-        return;
+        printf("-- %s(%fsec)\n", code_to_str(code), _T_DIFF);
     }
-    _T_STOP
-    printf("-- %s(%fsec)\n", code_to_str(code), _T_DIFF);
 }
 
-void _write_test ()
+void test_write ()
 {
     printf("\n_write test:\n");
      
@@ -111,7 +117,7 @@ void _write_test ()
     printf("-- %s(%fsec)\n", code_to_str(code), _T_DIFF);
 }
 
-void _read_test ()
+void test_read ()
 {
     printf("\n_read test:\n");
      
@@ -181,7 +187,7 @@ void _read_test ()
     printf("-- %s(%fsec)\n", PASS, _T_DIFF);
 }
 
-void _free_test ()
+void test_free ()
 {
     printf("\n_free test:\n");
  
@@ -252,11 +258,11 @@ void _free_test ()
 
 int main (int argc, char** argv)
 {
-    _init_test();
-    _malloc_test();
-    _write_test();
-    _read_test();
-    _free_test();
+    test_init();
+    test_malloc();
+    test_write();
+    test_read();
+    test_free();
 
 	return 0;
 }

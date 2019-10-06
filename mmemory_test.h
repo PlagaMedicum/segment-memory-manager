@@ -1,15 +1,10 @@
 #ifndef MMEMORY_TEST
 #define MMEMORY_TEST
 
-void _maloc_test ();
+#include "mmemory.h"
 
-void _free_test ();
-
-void _read_test ();
-
-void _write_test ();
-
-void _init_test ();
+// mock_mmem using for initializing virtual address space.
+void mock_mmem (MEMORY* m_mock);
 
 #endif
 

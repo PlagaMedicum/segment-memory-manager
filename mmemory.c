@@ -1,30 +1,45 @@
 #include "mmemory.h"
+#include "mmemory_test.h"
 #include <stdlib.h>
 #include <assert.h>
 
-// ST is a queue that represents segments table.
-typedef struct _segment_table
-{
-	VA va;          // Segment VA.
-	struct _segment_table* n;   // Physical address of next segment's VA.
-} ST;
+static MEMORY* mmem; // Virtual address space instance.
 
-// MEMORY represents virtual address space.
-typedef struct
+// free_st frees segment table.
+void free_st ()
 {
-	size_t pa;		// Physical address of first block.
-	size_t sz;	    // Number of blocks in memory.
-    ST* fs;         // Points to the first segment in the table.
-} MEMORY;
+    ST* cur = mmem->fs;
+    if (cur == NULL)
+    {
+        return;
+    }
 
-static MEMORY mmem; // Virtual address space instance.
+    ST* prev;
+    while (cur->n != NULL)
+    {
+        prev = cur;
+        cur = cur->n;
+
+        free(prev);
+    }
+
+    free(cur);
+}
+
+// mock_mmem frees mmemory and segment table and assigns new structures for them.
+void mock_mmem (MEMORY* m_mock)
+{
+    free_st();
+    free(mmem);
+    mmem = m_mock;
+}
 
 // s_pa returns physical address of segment s.
 size_t s_pa (const ST* s)
 {
     assert(s != NULL);
 
-    return mmem.pa + (size_t)s->va;
+    return mmem->pa + (size_t)s->va;
 }
 
 // last_s returns last valuable segment(next is not null) of the table.
@@ -35,7 +50,7 @@ size_t s_pa (const ST* s)
 // fs->va == 0, fs->n != NULL, fs->n->n == NULL --> fs
 ST* last_s()
 {
-    ST* s = mmem.fs;
+    ST* s = mmem->fs;
 
     assert(s != NULL);
 
@@ -46,11 +61,7 @@ ST* last_s()
         return s;
     }
 
-    if (s->n->va <= s->va)
-    {
-        printf("\nsnva = %ld sva = %ld\n", (size_t)s->n->va, (size_t)s->va);
-        assert(s->n->va > s->va);
-    }
+    assert(s->n->va > s->va);
 
     while (s->n->n != NULL)
     {
@@ -88,7 +99,7 @@ size_t s_end (const ST* s)
 }
 
 // free_spaceof returns amount of free space in the memory.
-#define free_space() (mmem.sz - s_end(last_s()))
+#define free_space() (mmem->sz - s_end(last_s()))
 
 // s_len returns number of elements(bytes) in segment s.
 // s_len = svan - svac,
@@ -137,7 +148,7 @@ int ptrs (const VA ptr, ST** s)
         return RC_ERR_SF;
     }
 
-    ST* temp_s = mmem.fs;
+    ST* temp_s = mmem->fs;
     while (temp_s->n != NULL)
     {
         if (ptr < (VA)temp_s->n->va)
@@ -159,9 +170,6 @@ int _malloc (VA* ptr, size_t szBlock)
 		return RC_ERR_SF;
 	}
 
-    size_t addr = rqmem(szBlock);
-
-    *ptr = (VA)addr;
     if (ptr == NULL)
     {
         return RC_ERR_U;
@@ -176,10 +184,12 @@ int _malloc (VA* ptr, size_t szBlock)
         s = s->n;
     }
 
-    addr = rqmem(sizeof(ST));
+    size_t addr = rqmem(sizeof(ST));
     s->n = (ST*)addr;
-    s->n->va = (VA)(szBlock + 1);
 
+    s->n->va = (VA)(szBlock + 1);
+    *ptr = (VA)(szBlock + 1);
+    
     return RC_SUCCESS;
 }
 
@@ -203,7 +213,7 @@ int _free (VA ptr)
         s->n->va = s->n->va - shift;
 
         // Shift back all elements of the segment and zero the old place.
-        for (size_t el = mmem.pa + (size_t)s->va; el <= (size_t)(mmem.pa + s_end(s)); el++)
+        for (size_t el = mmem->pa + (size_t)s->va; el <= (size_t)(mmem->pa + s_end(s)); el++)
         {
             assert((VA)(el) != NULL);
             assert((VA)(el - shift) != NULL);
@@ -218,10 +228,10 @@ int _free (VA ptr)
     // Shifting the ending of allocated address space.
     s->n->va = s->n->va - shift;
 
-    assert(mmem.fs != NULL);
+    assert(mmem->fs != NULL);
 
     // Udating connections in the addresses queue.
-    ST* prev = mmem.fs;
+    ST* prev = mmem->fs;
     while ((prev != s) && (prev->n != s))
     {
         assert(prev != NULL);
@@ -307,16 +317,16 @@ int s_init (int n, int szPage)
 		return RC_ERR_INPUT;
 	}
 
-    size_t addr = rqmem(n * szPage);
-    mmem.pa = addr;
+    mmem = (MEMORY*)rqmem(sizeof(MEMORY));
+
+    mmem->pa = rqmem(n * szPage);
     
-    addr = rqmem(sizeof(ST));
-    mmem.fs = (ST*)addr;
-    mmem.fs->va = 0;
+    mmem->fs = (ST*)rqmem(sizeof(ST));
+    mmem->fs->va = 0;
 
-    assert(mmem.fs->n == NULL);
+    assert(mmem->fs->n == NULL);
 
-    mmem.sz = n * szPage;
+    mmem->sz = n * szPage;
 	
     return RC_SUCCESS;
 }
