@@ -2,18 +2,23 @@
 #include "mmemory_test.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 static MEMORY* mmem; // Virtual address space instance.
 
 // free_st frees segment table.
-void free_st ()
+void free_mmem ()
 {
-    ST* cur = mmem->fs;
-    if (cur == NULL)
+    if (mmem == NULL)
+    {
+        return;
+    }
+    if (mmem->fs == NULL)
     {
         return;
     }
 
+    ST* cur = mmem->fs;
     ST* prev;
     while (cur->n != NULL)
     {
@@ -22,16 +27,16 @@ void free_st ()
 
         free(prev);
     }
-
     free(cur);
+
+    free(mmem);
 }
 
-// mock_mmem frees mmemory and segment table and assigns new structures for them.
-void mock_mmem (MEMORY* m_mock)
+void make_mmem (MEMORY* new_mem)
 {
-    free_st();
-    free(mmem);
-    mmem = m_mock;
+    free_mmem();
+    
+    mmem = new_mem;
 }
 
 // s_pa returns physical address of segment s.
@@ -50,10 +55,11 @@ size_t s_pa (const ST* s)
 // fs->va == 0, fs->n != NULL, fs->n->n == NULL --> fs
 ST* last_s()
 {
+    assert(mmem != NULL);
+    assert(mmem->fs != NULL);
+
     ST* s = mmem->fs;
-
-    assert(s != NULL);
-
+    
     if (s->n == NULL)
     {
         assert(s->va == 0);
@@ -99,7 +105,10 @@ size_t s_end (const ST* s)
 }
 
 // free_spaceof returns amount of free space in the memory.
-#define free_space() (mmem->sz - s_end(last_s()))
+size_t free_space()
+{
+    return mmem->sz - s_end(last_s());
+}
 
 // s_len returns number of elements(bytes) in segment s.
 // s_len = svan - svac,
@@ -120,29 +129,10 @@ size_t s_len (const ST* s)
     return (end + 1) - (size_t)s->va;
 }
 
-// rqmem allocates sz bytes of memory for provided pointer.
-size_t rqmem (const size_t sz)
-{
-    if (sz < 1)
-    {
-        return RC_ERR_INPUT;
-    }
-
-    size_t addr = (size_t)malloc(sz);
-
-    assert(addr != -1);
-
-    return addr;
-}
-
 // ptrs writes physical address of the segment,
 // which ptr belongs to, in s.
 int ptrs (const VA ptr, ST** s)
 {
-    if (ptr == NULL)
-    {
-        return RC_ERR_INPUT;
-    }
     if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
     {
         return RC_ERR_SF;
@@ -163,32 +153,29 @@ int ptrs (const VA ptr, ST** s)
     return RC_ERR_U;
 }
 
-int _malloc (VA* ptr, size_t szBlock)
+int s_malloc (VA* ptr, size_t szBlock)
 {
 	if (szBlock > free_space())
 	{
 		return RC_ERR_SF;
 	}
 
-    if (ptr == NULL)
+    ST* s = last_s();
+    if (s == NULL)
     {
         return RC_ERR_U;
     }
-
-    ST* s = last_s();
-
-    assert(s != NULL);
 
     while (s->n != NULL)
     {
         s = s->n;
     }
 
-    size_t addr = rqmem(sizeof(ST));
-    s->n = (ST*)addr;
-
+    s->n = malloc(sizeof(ST));
     s->n->va = (VA)(szBlock + 1);
-    *ptr = (VA)(szBlock + 1);
+    s->n->n = NULL;
+
+    *ptr = s->n->va;
     
     return RC_SUCCESS;
 }
@@ -253,6 +240,11 @@ int _free (VA ptr)
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
 {
+    if ((pBuffer == NULL) || (szBuffer < 1))
+    {
+        return RC_ERR_INPUT;
+    }
+
     ST* s;
     int code = ptrs(ptr, &s);
     if (code != RC_SUCCESS)
@@ -283,6 +275,11 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
 int _write (VA ptr, void* pBuffer, size_t szBuffer)
 {
+    if ((pBuffer == NULL) || (szBuffer < 1))
+    {
+        return RC_ERR_INPUT;
+    }
+
     ST* s;
     int code = ptrs(ptr, &s);
     if (code != RC_SUCCESS)
@@ -294,7 +291,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
     {
         return RC_ERR_SF;
     }
-
+    
     VA buf_el;
     VA s_el;
     for (int i = 0; i < szBuffer; i++)
@@ -317,16 +314,15 @@ int s_init (int n, int szPage)
 		return RC_ERR_INPUT;
 	}
 
-    mmem = (MEMORY*)rqmem(sizeof(MEMORY));
+    free_mmem();
 
-    mmem->pa = rqmem(n * szPage);
-    
-    mmem->fs = (ST*)rqmem(sizeof(ST));
-    mmem->fs->va = 0;
-
-    assert(mmem->fs->n == NULL);
-
+    mmem = malloc(sizeof(MEMORY));
     mmem->sz = n * szPage;
+    mmem->pa = (size_t)malloc(mmem->sz);
+    mmem->fs = malloc(sizeof(ST));
+
+    assert(mmem->fs->va == 0);
+    assert(mmem->fs->n == NULL);
 	
     return RC_SUCCESS;
 }

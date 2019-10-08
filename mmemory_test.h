@@ -3,8 +3,8 @@
 
 #include "mmemory.h"
 
-// mock_mmem using for initializing virtual address space.
-void mock_mmem (MEMORY* m_mock);
+// mock_mmem frees mmemory and segment table and assigns new structures for them.
+void make_mmem (MEMORY*);
 
 #endif
 

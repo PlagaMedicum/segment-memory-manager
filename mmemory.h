@@ -9,6 +9,7 @@
 #define RC_ERR_SF -2
 
 #define _init(x, y) s_init(x, y)
+#define _malloc(x, y) s_malloc(x, y)
 
 typedef char* VA;	// Тип описывающий адрес блока 
 
