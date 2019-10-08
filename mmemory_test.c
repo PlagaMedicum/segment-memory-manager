@@ -6,10 +6,10 @@
 #include <assert.h>
 #include "mmemory_test.h"
 
-#define PASS "PASS"
-#define FAIL_UNEXP "FAIL! Unexpected error"
-#define FAIL_WR_INP "FAIL! Wrong input parameters"
-#define FAIL_SF "FAIL! Access beyoud the segment"
+#define SUCCESS "0(SUCCESS)"
+#define FAIL_UNEXP "1(Unexpected error)"
+#define FAIL_WR_INP "-1(Wrong input parameters)"
+#define FAIL_SF "-2(Access beyoud the segment)"
 
 #define _T_START clock_t t_start = clock(), t_stop
 #define _T_STOP t_stop = clock()
@@ -70,9 +70,9 @@ MEMORY* init_mmem (size_t sz, const char* buf, size_t szBuf, size_t count, ...)
 char* code_to_str (const int code)
 {
     switch (code)
-    { 
+    {
         case RC_SUCCESS:
-            return PASS;
+            return SUCCESS;
         case RC_ERR_U:
             return FAIL_UNEXP;
         case RC_ERR_INPUT:
@@ -86,135 +86,201 @@ char* code_to_str (const int code)
 // TODO: Prepare load tests. Analyze problems of model, describe it and
 // choose required variables for creating graphics.
 
+// TC is a structure for test cases
+typedef struct
+{
+    char* name;     // Name of the test case.
+    int rc;         // Returned code.
+    int exp_rc;     // Expected return code.
+    int n;          // Number of pages.
+    int szPage;     // Size of pages.
+    size_t szBlock; // Size of segment.
+    VA ptr;         // Segment address.
+    char* pBuffer;  // Data buffer.
+    size_t szBuffer;// Size of the buffer.
+} TC;
+
 void test_init ()
 {
     printf("\n_init test:\n");
     
-    _T_START;
+    TC tc[] = {
+        {.name = "1 element", .n = 1, .szPage = 1},
+        {.name = "10 elements", .n = 10, .szPage = 1},
+        {.name = "100 elements", .n = 100, .szPage = 1},
+        {.name = "n * szPage == 0", .exp_rc = RC_ERR_INPUT, .n = 0, .szPage = 1},
+        {.name = "n * szPage < 0", .exp_rc = RC_ERR_INPUT, .n = -1, .szPage = 1},
+    };
 
-    int code[] = {_init(1, 1), _init(10, 1), _init(100, 1)};
-    for (int i = 0; i < sizeof(code)/sizeof(int); i++)
+
+    for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
     {
+        _T_START;
+        tc[i].rc = _init(tc[i].n, tc[i].szPage);
         _T_STOP;
-        printf("-- %s(%fsec)\n", code_to_str(code[i]), _T_DIFF);
+        if (tc[i].rc == tc[i].exp_rc)
+        {
+            printf("-- %s\n\
+                  \r   PASS(%fsec)\n", 
+                  tc[i].name, _T_DIFF);
+            continue;
+        }
+        printf("-- %s\n\
+              \r   FAIL!(%fsec)\n\
+              \r   Return code is: %s\n", 
+              tc[i].name, _T_DIFF, code_to_str(tc[i].rc));
     }
 }
 
 void test_malloc ()
 {
     printf("\n_malloc test:\n");
-     
+ 
+    TC tc[] = {
+        {.name = "1 byte", .szBlock = 1},
+        {.name = "10 byte", .szBlock = 10},
+        {.name = "100 byte", .szBlock = 100},
+        {.name = "0 size", .exp_rc = RC_ERR_INPUT, .szBlock = 0},
+        {.name = "Size out of range", .exp_rc = RC_ERR_SF, .szBlock = 999}
+    };
+
     init_mmem(111, NULL, 0, 0);
     
-    _T_START;
-
-    char* ptr[3];
-    int codes[] = {_malloc(&ptr[0], 1), _malloc(&ptr[1], 10), _malloc(&ptr[2], 100)};
-    for (int i = 0; i < sizeof(codes)/sizeof(int); i++)
+    for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
     {
-        if (ptr[i] == NULL)
-        {
-            _T_STOP;
-            printf("-- (_malloc)FAIL! Pointer is NULL(%fsec)\n", _T_DIFF);
-            return;
-        }
+        _T_START;
+        tc[i].rc = _malloc(&tc[i].ptr, tc[i].szBlock);
         _T_STOP;
-        printf("-- %s(%fsec)\n", code_to_str(codes[i]), _T_DIFF);
+        if ((tc[i].rc == RC_SUCCESS) && (tc[i].ptr == NULL))
+        {
+            tc[i].rc = RC_ERR_U;
+        }   
+        if (tc[i].rc == tc[i].exp_rc)
+        {
+            printf("-- %s\n\
+                  \r   PASS(%fsec)\n", 
+                  tc[i].name, _T_DIFF);
+            continue;
+        }
+        printf("-- %s\n\
+              \r   FAIL!(%fsec)\n\
+              \r   Return code is: %s\n", 
+              tc[i].name, _T_DIFF, code_to_str(tc[i].rc));
     }
 }
 
 void test_write ()
 {
     printf("\n_write test:\n");
-     
-    char buf[] = "Hi";
-    const size_t len = strlen(buf) + 1;
+    
+    TC tc[] = {
+        {.name = "\"Hi\"", .ptr = 0, .pBuffer = "Hi", .szBuffer = 3},
+        {.name = "NULL buffer", .exp_rc = RC_ERR_INPUT, .ptr = 0, .pBuffer = NULL, .szBuffer = 1},
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = 999, .pBuffer = 1, .szBuffer = 1}
+    };
 
-    init_mmem(len, NULL, 0, 1, len + 1);
+    init_mmem(3, NULL, 0, 1, 3);
 
-    _T_START;
-
-    const size_t va = 0;
-    int code = _write((VA) va, &buf, len);
-    _T_STOP;
-    printf("-- %s(%fsec)\n", code_to_str(code), _T_DIFF);
+    for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
+    {
+        _T_START;
+        tc[i].rc = _write(tc[i].ptr, tc[i].pBuffer, tc[i].szBuffer);
+        _T_STOP;
+        if (tc[i].rc == tc[i].exp_rc)
+        {
+            printf("-- %s\n\
+                  \r   PASS(%fsec)\n", 
+                  tc[i].name, _T_DIFF);
+            continue;
+        }
+        printf("-- %s\n\
+              \r   FAIL!(%fsec)\n\
+              \r   Return code is: %s\n", 
+              tc[i].name, _T_DIFF, code_to_str(tc[i].rc));
+    }
 }
 
 void test_read ()
 {
     printf("\n_read test:\n");
+    
+    TC tc[] = {
+        {.name = "\"Hi\"", .ptr = 0, .szBuffer = 3}
+    };
 
     char buf[] = "Hi";
     const size_t len = strlen(buf) + 1;
 
     init_mmem(len, buf, sizeof(buf), 1, len + 1);
     
-    _T_START;
-
-    const size_t va = 0;
-
-    char rbuf[3];
-    int code = _read((VA) va, &rbuf, len);
-    
-    assert(*(rbuf + 3) == '\0');
-
-    if (code != RC_SUCCESS)
+    for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
     {
-        _T_STOP;
-        printf("-- (_read)%s(%fsec)\n", code_to_str(code), _T_DIFF);
-        return;
-    }
-    
-    if (strcmp(buf, rbuf))
-    {
-        _T_STOP;
-        printf("-- (_read)FAIL!(%fsec)\n\
-                \r\tExpected: %s\n\
-                \r\tGot:      %s\n", 
-                _T_DIFF, buf, rbuf);
-    }
+        tc[i].pBuffer = malloc(tc[i].szBuffer);
 
-    _T_STOP;
-    printf("-- %s(%fsec)\n", PASS, _T_DIFF);
+        _T_START;
+        tc[i].rc = _read(tc[i].ptr, tc[i].pBuffer, tc[i].szBuffer);
+        _T_STOP;
+        if ((tc[i].rc == RC_SUCCESS) && (strcmp(buf, tc[i].pBuffer)))
+        {
+            tc[i].rc = RC_ERR_U;
+        }
+        if (tc[i].rc == tc[i].exp_rc)
+        {
+            printf("-- %s\n\
+                  \r   PASS(%fsec)\n", 
+                  tc[i].name, _T_DIFF);
+            continue;
+        }
+        printf("-- %s\n\
+              \r   FAIL!(%fsec)\n\
+              \r   Return code is: %s\n", 
+              tc[i].name, _T_DIFF, code_to_str(tc[i].rc));
+    }
 }
 
 void test_free ()
 {
     printf("\n_free test:\n");
+    
+    TC tc[] = {
+        {.name = "\"Hi\"", .ptr = 0}
+    };
 
     char buf[] = "Hi";
     const size_t len = strlen(buf) + 1;
 
     MEMORY* mem = init_mmem(len, buf, sizeof(buf), 1, len + 1);
    
-    _T_START;
- 
-    const size_t va = 0;
-    int code = _free((VA) va);
-    if (code != RC_SUCCESS)
-    {
-        _T_STOP;
-        printf("-- (_free)%s(%fsec)\n", code_to_str(code), _T_DIFF);
-        return;
-    }
-
     char* rbuf = malloc(sizeof(buf));
-    for (int i = 0; i < sizeof(buf); i++)
+    for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
     {
-        rbuf[i] = *((char*)(mem->pa + i));
-    }
-    if (buf == rbuf)
-    {
+        _T_START;
+        tc[i].rc = _free(tc[i].ptr);
         _T_STOP;
-        printf("-- (_read)FAIL! Data in the memory does'nt changed(%fsec)\n",
-                _T_DIFF);
-        free(rbuf);
-        return;
-    }
-    free(rbuf);
 
-    _T_STOP;
-    printf("-- %s(%fsec)\n", PASS, _T_DIFF);
+        for (int i = 0; i < sizeof(buf); i++)
+        {
+            rbuf[i] = *((char*)(mem->pa + i));
+        }
+        if ((tc[i].rc == RC_SUCCESS) && (buf == rbuf))
+        {
+            tc[i].rc = RC_ERR_U;
+        }
+
+        if (tc[i].rc == tc[i].exp_rc)
+        {
+            printf("-- %s\n\
+                  \r   PASS(%fsec)\n", 
+                  tc[i].name, _T_DIFF);
+            continue;
+        }
+        printf("-- %s\n\
+              \r   FAIL!(%fsec)\n\
+              \r   Return code is: %s\n", 
+              tc[i].name, _T_DIFF, code_to_str(tc[i].rc));
+    }
+ 
+    free(rbuf);
 }
 
 int main (int argc, char** argv)

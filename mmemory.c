@@ -155,6 +155,10 @@ int ptrs (const VA ptr, ST** s)
 
 int s_malloc (VA* ptr, size_t szBlock)
 {
+    if (szBlock < 1)
+    {
+        return RC_ERR_INPUT;
+    }
 	if (szBlock > free_space())
 	{
 		return RC_ERR_SF;
@@ -259,7 +263,6 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
 
     VA buf_el;
     VA s_el;
-    
     for (int i = 0; i < szBuffer; i++)
     {
         buf_el = (VA)(pBuffer + i);
