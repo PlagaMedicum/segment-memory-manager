@@ -83,9 +83,6 @@ char* code_to_str (const int code)
     return NULL;
 }
 
-// TODO: Prepare load tests. Analyze problems of model, describe it and
-// choose required variables for creating graphics.
-
 // TC is a structure for test cases
 typedef struct
 {
@@ -174,9 +171,11 @@ void test_write ()
     printf("\n_write test:\n");
     
     TC tc[] = {
-        {.name = "\"Hi\"", .ptr = 0, .pBuffer = "Hi", .szBuffer = 3},
-        {.name = "NULL buffer", .exp_rc = RC_ERR_INPUT, .ptr = 0, .pBuffer = NULL, .szBuffer = 1},
-        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = 999, .pBuffer = 1, .szBuffer = 1}
+        {.name = "\"Hi\"", .ptr = (VA)0, .pBuffer = (char*)"Hi", .szBuffer = 3},
+        {.name = "NULL buffer", .exp_rc = RC_ERR_INPUT, .ptr = (VA)0, .pBuffer = (char*)NULL, .szBuffer = 1},
+        {.name = "0 size buffer", .exp_rc = RC_ERR_INPUT, .ptr = (VA)0, .pBuffer = (char*)1, .szBuffer = 0},
+        {.name = "Negative ptr", .exp_rc = RC_ERR_SF, .ptr = (VA)-1, .pBuffer = (char*)1, .szBuffer = 1},
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999, .pBuffer = (char*)1, .szBuffer = 1}
     };
 
     init_mmem(3, NULL, 0, 1, 3);
@@ -205,7 +204,10 @@ void test_read ()
     printf("\n_read test:\n");
     
     TC tc[] = {
-        {.name = "\"Hi\"", .ptr = 0, .szBuffer = 3}
+        {.name = "\"Hi\"", .ptr = (VA)0, .szBuffer = 3},
+        {.name = "0 size buffer", .exp_rc = RC_ERR_INPUT, .ptr = (VA)0, .szBuffer = 0},
+        {.name = "Negative ptr", .exp_rc = RC_ERR_SF, .ptr = (VA)-1, .szBuffer = 1},
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999, .szBuffer = 1}
     };
 
     char buf[] = "Hi";
@@ -243,13 +245,15 @@ void test_free ()
     printf("\n_free test:\n");
     
     TC tc[] = {
-        {.name = "\"Hi\"", .ptr = 0}
+        {.name = "\"Hi\"", .ptr = (VA)0},
+        {.name = "Negative ptr", .exp_rc = RC_ERR_SF, .ptr = (VA)-1},
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999}
     };
 
     char buf[] = "Hi";
     const size_t len = strlen(buf) + 1;
 
-    MEMORY* mem = init_mmem(len, buf, sizeof(buf), 1, len + 1);
+    MEMORY* mem = init_mmem(len, buf, sizeof(buf), 3, len + 1, 2, 3);
    
     char* rbuf = malloc(sizeof(buf));
     for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)

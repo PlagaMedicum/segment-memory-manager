@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <stdio.h>
 
+// TODO: Load tests.
+// TODO: Remove defragmentation.  
+
 static MEMORY* mmem; // Virtual address space instance.
 
 // free_st frees segment table.
