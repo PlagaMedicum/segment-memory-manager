@@ -2,18 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
 #include <assert.h>
-#include "mmemory_test.h"
+#include "benchmark.h"
+#include "unit_tests.h"
 
 #define SUCCESS "0(SUCCESS)"
 #define FAIL_UNEXP "1(Unexpected error)"
 #define FAIL_WR_INP "-1(Wrong input parameters)"
 #define FAIL_SF "-2(Access beyoud the segment)"
-
-#define _T_START clock_t t_start = clock(), t_stop
-#define _T_STOP t_stop = clock()
-#define _T_DIFF (double)(t_stop - t_start) / CLOCKS_PER_SEC
 
 // init_mmem creates new memory and segment table instances
 // with specified parameters and calls make_mmem to update mmem.

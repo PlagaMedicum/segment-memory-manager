@@ -1,5 +1,5 @@
 #include "mmemory.h"
-#include "mmemory_test.h"
+#include "tests/unit_tests.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -218,7 +218,8 @@ int _free (VA ptr)
     }
 
     assert(s->n != NULL);
-
+    assert((size_t)s->n->va >= shift);
+    
     // Shifting the ending of allocated address space.
     s->n->va = s->n->va - shift;
 
@@ -326,7 +327,10 @@ int s_init (int n, int szPage)
     mmem->sz = n * szPage;
     mmem->pa = (size_t)malloc(mmem->sz);
     mmem->fs = malloc(sizeof(ST));
+    //mmem->fs->va = 0;
+    //mmem->fs->n = NULL;
 
+    printf("fs = %ld, va = %ld, sz = %ld\n", (size_t)mmem->fs, (size_t)mmem->fs->va, mmem->sz);
     assert(mmem->fs->va == 0);
     assert(mmem->fs->n == NULL);
 	
