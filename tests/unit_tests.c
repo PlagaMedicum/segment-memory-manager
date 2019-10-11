@@ -6,7 +6,7 @@
 #include "benchmark.h"
 #include "unit_tests.h"
 
-#define SUCCESS "0(SUCCESS)"
+#define SUCCESS "0(Success)"
 #define FAIL_UNEXP "1(Unexpected error)"
 #define FAIL_WR_INP "-1(Wrong input parameters)"
 #define FAIL_SF "-2(Access beyoud the segment)"
@@ -20,9 +20,9 @@
 // ... -- lengths of segments in the table.
 MEMORY* init_mmem (size_t sz, const char* buf, size_t szBuf, size_t count, ...)
 {
-    MEMORY* mem = malloc(sizeof(MEMORY));
+    MEMORY* mem = calloc(1, sizeof(MEMORY));
     mem->sz = sz;
-    mem->pa = (size_t)malloc(mem->sz);
+    mem->pa = (size_t)calloc(mem->sz, 1);
 
     // Copying data from buf
     for (int i = 0; i < szBuf; i++)
@@ -32,10 +32,8 @@ MEMORY* init_mmem (size_t sz, const char* buf, size_t szBuf, size_t count, ...)
 
     // Creating segment table
     va_list lengths;
-    ST* st = malloc(sizeof(ST));
+    ST* st = calloc(1, sizeof(ST));
     VA va = 0;
-    st->va = va;
-    st->n = NULL;
     mem->fs = st;
 
     // Adding segments in the table
@@ -46,10 +44,9 @@ MEMORY* init_mmem (size_t sz, const char* buf, size_t szBuf, size_t count, ...)
     ST* next_s;
     for (int i = 0; i < count; i++)
     {
-        next_s = malloc(sizeof(ST));
+        next_s = calloc(1, sizeof(ST));
         va = (VA)(va + va_arg(lengths, size_t));
         next_s->va = va;
-        next_s->n = NULL;
 
         cur_s->n = next_s;
         cur_s = cur_s->n;
@@ -134,7 +131,7 @@ void test_malloc ()
         {.name = "10 byte", .szBlock = 10},
         {.name = "100 byte", .szBlock = 100},
         {.name = "0 size", .exp_rc = RC_ERR_INPUT, .szBlock = 0},
-        {.name = "Size out of range", .exp_rc = RC_ERR_SF, .szBlock = 999}
+        {.name = "Size out of range", .exp_rc = RC_ERR_SF, .szBlock = 999},
     };
 
     init_mmem(111, NULL, 0, 0);
@@ -171,7 +168,7 @@ void test_write ()
         {.name = "NULL buffer", .exp_rc = RC_ERR_INPUT, .ptr = (VA)0, .pBuffer = (char*)NULL, .szBuffer = 1},
         {.name = "0 size buffer", .exp_rc = RC_ERR_INPUT, .ptr = (VA)0, .pBuffer = (char*)1, .szBuffer = 0},
         {.name = "Negative ptr", .exp_rc = RC_ERR_SF, .ptr = (VA)-1, .pBuffer = (char*)1, .szBuffer = 1},
-        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999, .pBuffer = (char*)1, .szBuffer = 1}
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999, .pBuffer = (char*)1, .szBuffer = 1},
     };
 
     init_mmem(3, NULL, 0, 1, 3);
@@ -203,7 +200,7 @@ void test_read ()
         {.name = "\"Hi\"", .ptr = (VA)0, .szBuffer = 3},
         {.name = "0 size buffer", .exp_rc = RC_ERR_INPUT, .ptr = (VA)0, .szBuffer = 0},
         {.name = "Negative ptr", .exp_rc = RC_ERR_SF, .ptr = (VA)-1, .szBuffer = 1},
-        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999, .szBuffer = 1}
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999, .szBuffer = 1},
     };
 
     char buf[] = "Hi";
@@ -213,7 +210,7 @@ void test_read ()
     
     for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
     {
-        tc[i].pBuffer = malloc(tc[i].szBuffer);
+        tc[i].pBuffer = calloc(tc[i].szBuffer, 1);
 
         _T_START;
         tc[i].rc = _read(tc[i].ptr, tc[i].pBuffer, tc[i].szBuffer);
@@ -243,15 +240,15 @@ void test_free ()
     TC tc[] = {
         {.name = "\"Hi\"", .ptr = (VA)0},
         {.name = "Negative ptr", .exp_rc = RC_ERR_SF, .ptr = (VA)-1},
-        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999}
+        {.name = "Ptr out of range", .exp_rc = RC_ERR_SF, .ptr = (VA)999},
     };
 
     char buf[] = "Hi";
     const size_t len = strlen(buf) + 1;
 
-    MEMORY* mem = init_mmem(len, buf, sizeof(buf), 3, len + 1, 2, 3);
-   
-    char* rbuf = malloc(sizeof(buf));
+    MEMORY* mem = init_mmem(len, buf, sizeof(buf), 1, len + 1);
+
+    char* rbuf = calloc(sizeof(buf), 1);
     for (int i = 0; i < sizeof(tc)/sizeof(TC); i++)
     {
         _T_START;

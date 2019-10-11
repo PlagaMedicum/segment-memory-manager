@@ -65,6 +65,7 @@ ST* last_s()
     
     if (s->n == NULL)
     {
+        printf("\nva = %ld\n", (size_t)s->va);
         assert(s->va == 0);
 
         return s;
@@ -178,9 +179,8 @@ int s_malloc (VA* ptr, size_t szBlock)
         s = s->n;
     }
 
-    s->n = malloc(sizeof(ST));
+    s->n = calloc(1, sizeof(ST));
     s->n->va = (VA)(szBlock + 1);
-    s->n->n = NULL;
 
     *ptr = s->n->va;
     
@@ -225,7 +225,7 @@ int _free (VA ptr)
 
     assert(mmem->fs != NULL);
 
-    // Udating connections in the addresses queue.
+    // Udating connections in the address queue.
     ST* prev = mmem->fs;
     while ((prev != s) && (prev->n != s))
     {
@@ -323,14 +323,11 @@ int s_init (int n, int szPage)
 
     free_mmem();
 
-    mmem = malloc(sizeof(MEMORY));
+    mmem = calloc(1, sizeof(MEMORY));
     mmem->sz = n * szPage;
-    mmem->pa = (size_t)malloc(mmem->sz);
-    mmem->fs = malloc(sizeof(ST));
-    //mmem->fs->va = 0;
-    //mmem->fs->n = NULL;
+    mmem->pa = (size_t)calloc(mmem->sz, 1);
+    mmem->fs = calloc(1, sizeof(ST));
 
-    printf("fs = %ld, va = %ld, sz = %ld\n", (size_t)mmem->fs, (size_t)mmem->fs->va, mmem->sz);
     assert(mmem->fs->va == 0);
     assert(mmem->fs->n == NULL);
 	
