@@ -4,9 +4,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-// TODO: Load tests.
-// TODO: Remove defragmentation.  
-
 static MEMORY* mmem; // Virtual address space instance.
 
 // free_st frees segment table.
@@ -38,106 +35,80 @@ void free_mmem ()
 void make_mmem (MEMORY* new_mem)
 {
     free_mmem();
-    
     mmem = new_mem;
 }
 
-// s_pa returns physical address of segment s.
-size_t s_pa (const ST* s)
-{
-    assert(s != NULL);
+// s_end returns address of last block of segment s.
+#define s_end(s) (s->va + s->l)
 
-    return mmem->pa + (size_t)s->va;
-}
-
-// last_s returns last valuable segment(next is not null) of the table.
-// Note: Cannot make it static because o _free.
-//
-// Examples:
-// fs->va == 0, fs->n == NULL                   --> fs
-// fs->va == 0, fs->n != NULL, fs->n->n == NULL --> fs
-ST* last_s()
+// find_space returns free segment for provided length
+ST* find_space (size_t s_len)
 {
-    assert(mmem != NULL);
     assert(mmem->fs != NULL);
-
-    ST* s = mmem->fs;
     
-    if (s->n == NULL)
+    if(mmem->fs->n == NULL)
     {
-        printf("\nva = %ld\n", (size_t)s->va);
-        assert(s->va == 0);
-
-        return s;
+        return mmem->fs;
     }
 
-    assert(s->n->va > s->va);
+    ST* s = mmem->fs;
 
-    while (s->n->n != NULL)
+    while (s->n != NULL)
     {
-        assert(s->n->va > s->va);
+        if (s->n->va - s_end(s) >= s_len)
+        {
+            return s;
+        }
 
         s = s->n;
     }
-    return s;
-}
 
-// s_end returns VA of last allocated block of the segment s.
-// s->n == NULL --> s_end = 0;
-// s->n != NULL --> s_end = svan - 1,
-// svan -- starting va of next segment.
-//
-// Examples:
-// va == 0, n == NULL  --> s_end = 0
-// va == 0, n->va == 1 --> s_end = 1 - 1 = 0
-// va == 0, n->va == 3 --> s_end = 3 - 1 = 2
-size_t s_end (const ST* s)
-{
-    assert(s != NULL);
-
-    if (s->n == NULL)
+    if (mmem->sz - (size_t)s->va >= s_len)
     {
-        assert(s->va == 0);
-
-        return 0;
+        return s;
     }
 
-    assert(s->n != NULL);
-    assert(s->n->va > 0);
-
-    return (size_t)s->n->va - 1;
+    return NULL;
 }
 
-// free_spaceof returns amount of free space in the memory.
-size_t free_space()
+int _malloc (VA* ptr, size_t szBlock)
 {
-    return mmem->sz - s_end(last_s());
-}
-
-// s_len returns number of elements(bytes) in segment s.
-// s_len = svan - svac,
-// svan -- starting va of next segment,
-// svac -- starting va of current segment.
-//
-// Examples:
-// va == 0, n->va == 3 --> s_len = 3 - 0 = 3
-size_t s_len (const ST* s)
-{
-    assert(s != NULL);
-
-    size_t end = s_end(s);
-    if (end == 0)
+    if ((szBlock < 1) || (szBlock > mmem->sz))
     {
-        return 0;
+        return RC_ERR_INPUT;
     }
-    return (end + 1) - (size_t)s->va;
+
+    ST* s = find_space(szBlock);
+    if (s == NULL)
+    {
+        return RC_ERR_U;
+    }
+
+    if ((s == mmem->fs) && (s->l == 0))
+    {
+        s->l = szBlock;
+
+        *ptr = s->va;
+
+        return RC_SUCCESS;
+    }
+
+    ST* next = s->n;
+    s->n = calloc(1, sizeof(ST));
+    s->n->va = s_end(s) + 1;
+    s->n->l = szBlock;
+    s->n->n = next;
+
+    *ptr = s->va;
+    
+    return RC_SUCCESS;
 }
 
-// ptrs writes physical address of the segment,
-// which ptr belongs to, in s.
+// ptrs wrtes in s physical address of the segment,
+// which ptr belongs to.
 int ptrs (const VA ptr, ST** s)
 {
-    if ((ptr < 0) || (ptr > (VA)s_end(last_s())))
+    if ((ptr < 0) || (ptr > (VA)mmem->sz))
     {
         return RC_ERR_SF;
     }
@@ -145,7 +116,7 @@ int ptrs (const VA ptr, ST** s)
     ST* temp_s = mmem->fs;
     while (temp_s->n != NULL)
     {
-        if (ptr < (VA)temp_s->n->va)
+        if (ptr <= s_end(temp_s))
         {
             *s = temp_s;
             return RC_SUCCESS;
@@ -157,36 +128,6 @@ int ptrs (const VA ptr, ST** s)
     return RC_ERR_U;
 }
 
-int s_malloc (VA* ptr, size_t szBlock)
-{
-    if (szBlock < 1)
-    {
-        return RC_ERR_INPUT;
-    }
-	if (szBlock > free_space())
-	{
-		return RC_ERR_SF;
-	}
-
-    ST* s = last_s();
-    if (s == NULL)
-    {
-        return RC_ERR_U;
-    }
-
-    while (s->n != NULL)
-    {
-        s = s->n;
-    }
-
-    s->n = calloc(1, sizeof(ST));
-    s->n->va = (VA)(szBlock + 1);
-
-    *ptr = s->n->va;
-    
-    return RC_SUCCESS;
-}
-
 int _free (VA ptr)
 {
     ST* s;
@@ -196,54 +137,31 @@ int _free (VA ptr)
         return code;
     }
 
-    assert (s->n != NULL);
-
-    size_t shift = s_len(s);
-    while (s->n->n != NULL)
-    {
-        s = s->n;
-
-        // Shifting va of the next segment.
-        s->n->va = s->n->va - shift;
-
-        // Shift back all elements of the segment and zero the old place.
-        for (size_t el = mmem->pa + (size_t)s->va; el <= (size_t)(mmem->pa + s_end(s)); el++)
-        {
-            assert((VA)(el) != NULL);
-            assert((VA)(el - shift) != NULL);
-
-            *((VA)(el - shift)) = *((VA)el);
-            *((VA)el) = 0;
-        }
-    }
-
-    assert(s->n != NULL);
-    assert((size_t)s->n->va >= shift);
-    
-    // Shifting the ending of allocated address space.
-    s->n->va = s->n->va - shift;
-
-    assert(mmem->fs != NULL);
-
-    // Udating connections in the address queue.
     ST* prev = mmem->fs;
-    while ((prev != s) && (prev->n != s))
-    {
-        assert(prev != NULL);
-
-        prev = prev->n;
-    }
     if (prev == s)
     {
-        prev->n = prev->n->n;
+        free(s);
+
+        return RC_SUCCESS;
     }
-    else
+
+    while (prev->n != s)
     {
-        prev->n = s->n;
+        prev = prev->n;
     }
+    prev->n = s->n;
+
     free(s);
 
     return RC_SUCCESS;
+}
+
+// s_pa returns physical address of segment s.
+size_t s_pa (const ST* s)
+{
+    assert(s != NULL);
+
+    return mmem->pa + (size_t)s->va;
 }
 
 int _read (VA ptr, void* pBuffer, size_t szBuffer)
@@ -260,7 +178,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
         return code;
     }
 
-    if (szBuffer > s_len(s))
+    if (szBuffer > s->l)
     {
         return RC_ERR_SF;
     }
@@ -273,6 +191,7 @@ int _read (VA ptr, void* pBuffer, size_t szBuffer)
         s_el = (VA)(s_pa(s) + i);
 
         assert(s_el != NULL);
+        assert(buf_el != NULL);
 
         *buf_el = *s_el;
     }
@@ -294,7 +213,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
         return code;
     }
 
-    if (szBuffer > s_len(s))
+    if (szBuffer > s->l)
     {
         return RC_ERR_SF;
     }
@@ -306,6 +225,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
         buf_el = (VA)(pBuffer + i);
         s_el = (VA)(s_pa(s) + i);
 
+        assert(s_el != NULL);
         assert(buf_el != NULL);
 
         *s_el = *buf_el;
@@ -314,7 +234,7 @@ int _write (VA ptr, void* pBuffer, size_t szBuffer)
     return RC_SUCCESS;
 }
 
-int s_init (int n, int szPage)
+int _init (int n, int szPage)
 {
 	if ((n < 1) || (szPage < 1))
 	{
@@ -328,9 +248,6 @@ int s_init (int n, int szPage)
     mmem->pa = (size_t)calloc(mmem->sz, 1);
     mmem->fs = calloc(1, sizeof(ST));
 
-    assert(mmem->fs->va == 0);
-    assert(mmem->fs->n == NULL);
-	
     return RC_SUCCESS;
 }
 

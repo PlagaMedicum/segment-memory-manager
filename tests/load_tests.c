@@ -11,7 +11,7 @@
 void test_fragmentation ()
 {
     printf("\nfragmentation test:\n\
-            \rSIZE\t|NUMBER\t|TIME\n");
+          \rSIZE\t|NUMBER\t|TIME\n");
 
     VA va;
     for (size_t s_size = 1; s_size <= 101; s_size += 10)

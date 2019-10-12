@@ -32,28 +32,28 @@ MEMORY* init_mmem (size_t sz, const char* buf, size_t szBuf, size_t count, ...)
 
     // Creating segment table
     va_list lengths;
-    ST* st = calloc(1, sizeof(ST));
-    VA va = 0;
-    mem->fs = st;
-
-    // Adding segments in the table
     va_start(lengths, count);
 
-    ST* cur_s;
-    cur_s = st;
-    ST* next_s;
+    mem->fs = calloc(1, sizeof(ST));
+
+    ST* s = mem->fs;
+    size_t len;
+    VA va = 0;
     for (int i = 0; i < count; i++)
     {
-        next_s = calloc(1, sizeof(ST));
-        va = (VA)(va + va_arg(lengths, size_t));
-        next_s->va = va;
+        len = va_arg(lengths, size_t);
+        s->l = len;
+        
+        va = (VA)(va + len);
 
-        cur_s->n = next_s;
-        cur_s = cur_s->n;
+        s->n = calloc(1, sizeof(ST));
+        s->n->va = va;
+
+        s = s->n;
     }
 
     va_end(lengths);
-    
+
     make_mmem(mem);
 
     return mem;
@@ -131,7 +131,7 @@ void test_malloc ()
         {.name = "10 byte", .szBlock = 10},
         {.name = "100 byte", .szBlock = 100},
         {.name = "0 size", .exp_rc = RC_ERR_INPUT, .szBlock = 0},
-        {.name = "Size out of range", .exp_rc = RC_ERR_SF, .szBlock = 999},
+        {.name = "Size out of range", .exp_rc = RC_ERR_INPUT, .szBlock = 999},
     };
 
     init_mmem(111, NULL, 0, 0);
@@ -141,10 +141,6 @@ void test_malloc ()
         _T_START;
         tc[i].rc = _malloc(&tc[i].ptr, tc[i].szBlock);
         _T_STOP;
-        if ((tc[i].rc == RC_SUCCESS) && (tc[i].ptr == NULL))
-        {
-            tc[i].rc = RC_ERR_U;
-        }   
         if (tc[i].rc == tc[i].exp_rc)
         {
             printf("-- %s\n\

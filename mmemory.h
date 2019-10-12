@@ -1,6 +1,7 @@
 #ifndef MMEMORY_H
 #define MMEMORY_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #define RC_SUCCESS 0
@@ -16,7 +17,8 @@ typedef char* VA;	// Тип описывающий адрес блока
 // ST is a queue that represents segments table.
 typedef struct _segment_table
 {
-	VA va;          // Segment VA.
+	VA va;                      // Segment VA.
+    size_t l;                   // Segment length
 	struct _segment_table* n;   // Physical address of next segment's VA.
 } ST;
 
