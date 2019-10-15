@@ -13,10 +13,6 @@ void free_mmem ()
     {
         return;
     }
-    if (mmem->fs == NULL)
-    {
-        return;
-    }
 
     ST* cur = mmem->fs;
     ST* prev;
@@ -24,12 +20,19 @@ void free_mmem ()
     {
         prev = cur;
         cur = cur->n;
-
+        
         free(prev);
+        prev = NULL;
     }
+
+    if (cur == mmem->fs){
+        mmem->fs = NULL;
+    }
+
     free(cur);
 
     free(mmem);
+    mmem = NULL;
 }
 
 void make_mmem (MEMORY* new_mem)
@@ -137,14 +140,15 @@ int _free (VA ptr)
         return code;
     }
 
-    ST* prev = mmem->fs;
-    if (prev == s)
+    if (s == mmem->fs)
     {
+        mmem->fs = s->n;
         free(s);
 
         return RC_SUCCESS;
     }
 
+    ST* prev = mmem->fs;
     while (prev->n != s)
     {
         prev = prev->n;
