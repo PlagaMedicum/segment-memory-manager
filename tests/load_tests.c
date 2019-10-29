@@ -3,12 +3,10 @@
 #include "../mmemory.h"
 #include "load_tests.h"
 
-// TODO: Fix init with calloc and fix SF in ?free?
-
-// test_fragmentation tests the slowdown while freeing
+// test_fragmentation_perf tests the slowdown while freeing
 // first segment in memory, increasing number and size of
 // segments to reallocate whith defragmentation.
-void test_fragmentation ()
+void test_fragmentation_perf ()
 {
     printf("\nfragmentation test:\n\
           \rSIZE\t|NUMBER\t|TIME\n");
@@ -18,13 +16,13 @@ void test_fragmentation ()
     {
         for (size_t s_number = 1; s_number <=101; s_number += 10)
         {
+            _T_START;
             _init(s_size, s_number);
             for (int i = 0; i < s_number; i++)
             {
                 _malloc(&va, s_size);
             }
 
-            _T_START;
             _free((VA)0);
             _T_STOP;
 
@@ -35,7 +33,7 @@ void test_fragmentation ()
 
 int main (int argc, char** argv)
 {
-    test_fragmentation();
+    test_fragmentation_perf();
 
     return 0;
 }
