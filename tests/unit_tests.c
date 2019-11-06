@@ -255,7 +255,7 @@ void test_free ()
         {
             rbuf[i] = *((char*)(mem->pa + i));
         }
-        if ((tc[i].rc == RC_SUCCESS) && (buf == rbuf))
+        if ((tc[i].rc == RC_SUCCESS) && (strcmp(buf, rbuf)))
         {
             tc[i].rc = RC_ERR_U;
         }
